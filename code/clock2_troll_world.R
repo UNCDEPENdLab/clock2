@@ -7,37 +7,46 @@ mean_val <- 10
 sd_val <- 2
 centers <- sample(seq(0, 360, by=10), ncenters, replace=FALSE)
 values <- sample(truncnorm::rtruncnorm(ncenters, a=0, mean=mean_val, sd=sd_val))
-width_sd <- 35 # fixed
+width_sd <- 0.2 # fixed
 
 bump_prominence <- 10
 bump_value <- mean_val*bump_prominence
 bump_center <- sample(seq(0, 360, by=10), 1, replace=FALSE)
 
-gg <- lapply(seq_len(ncenters), function(ii) {
-  r <- rbf$new(value=values[ii], value_sd=0, center=centers[ii], width_sd = width_sd)
-})
+# gg <- lapply(seq_len(ncenters), function(ii) {
+#   r <- rbf$new(value=values[ii], value_sd=0, center=centers[ii], width_sd = width_sd)
+# })
+# 
+# bump_rbf <- rbf$new(value=bump_value, value_sd=0, center=bump_center, width_sd = width_sd)
+# 
+# gg <- c(gg, bump_rbf)
 
-bump_rbf <- rbf$new(value=bump_value, value_sd=0, center=bump_center, width_sd = width_sd)
 
-gg <- c(gg, bump_rbf)
+# VM version
+contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights=c(values, bump_value), widths = rep(width_sd, ncenters+1))
+
 
 
 # a <- rbf$new(value=10, value_sd=1, center=100, width_sd = 20)
 # vv <- a$get_tvec()
 
-contingency <- rbf_set$new(elements = gg)
-plot(contingency$get_tvec())
+#contingency <- rbf_set$new(elements = gg)
+plot(contingency$get_vfunc())
+
 contingency$get_centers()
-contingency$get_values()
-contingency$apply_drift(10)
-contingency$get_centers()
+contingency$get_weights()
+
+
+#contingency$apply_drift(2)
+#contingency$get_centers()
 
 for (i in 1:10) {
-  contingency$apply_drift(10)
+  contingency$apply_drift(2)
   print(contingency$get_centers())
-  plot(contingency$get_tvec())
+  plot(contingency$get_vfunc())
   Sys.sleep(.3)
 }
+
 
 troll_world <- R6::R6Class(
   "troll_world",
