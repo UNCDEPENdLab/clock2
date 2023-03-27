@@ -7,7 +7,79 @@ source("von_mises_basis.R")
 #sig_spread=sig;
 
 
+
+floor_val <- 10
+
+
+ncenters <- 6
+mean_val <- 10
+sd_val <- 2
+centers <- sample(seq(0, 360, by=10), ncenters, replace=FALSE)
+values <- sample(truncnorm::rtruncnorm(ncenters, a=0, mean=mean_val, sd=sd_val))
+width_sd <- 20 # fixed
+
+bump_prominence <- 10
+bump_value <- mean_val*bump_prominence
+bump_center <- sample(seq(0, 360, by=10), 1, replace=FALSE)
+
+# gg <- lapply(seq_len(ncenters), function(ii) {
+#   r <- rbf$new(value=values[ii], value_sd=0, center=centers[ii], width_sd = width_sd)
+# })
+# 
+# bump_rbf <- rbf$new(value=bump_value, value_sd=0, center=bump_center, width_sd = width_sd)
+# 
+# gg <- c(gg, bump_rbf)
+
+
+# VM version
+# contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights=c(values, bump_value), widths = rep(width_sd, ncenters+1))
+
+# test radians version
+centers <- (pi/180) * centers
+width_sd <- (pi/180) * width_sd
+bump_center <- (pi/180) * bump_center
+contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights=c(values, bump_value), widths = rep(width_sd, ncenters+1), units="radians")
+
+# a <- rbf$new(value=10, value_sd=1, center=100, width_sd = 20)
+# vv <- a$get_tvec()
+
+#contingency <- rbf_set$new(elements = gg)
+plot(contingency$get_vfunc())
+
+contingency$get_centers()
+contingency$get_weights()
+
+
+#contingency$apply_drift(2)
+#contingency$get_centers()
+
+for (i in 1:10) {
+  #contingency$apply_drift(30)
+  contingency$apply_drift((pi/180) * 30)
+  print(contingency$get_centers())
+  #print(contingency$get_weights())
+  plot(contingency$get_vfunc())
+  Sys.sleep(.3)
+}
+
+deg2rad <- function(d, wrap2pi=TRUE) {
+  r <- d * (pi/180) 
+  if (isTRUE(wrap2pi)) r <- r %% (2*pi)
+  return(r)
+}
+
+rad2deg <- function(r, wrap360=TRUE) {
+  d <- r * 180/pi
+  if (isTRUE(wrap360)) d <- d %% 360
+  return(d)
+}
+
+# rather than applying drift sequentially, use the cumsum of a GRW process
+grwalk <- cumsum(rnorm(100, mean=0, sd=50))
+
+
 ##
+
 
 # test basis set
 vset <- vm_circle_set(n_basis=12, weights=1:12, width_sd=0.02)
@@ -188,3 +260,4 @@ int_f <- function(x, mu1, mu2, sd1, sd2) {
 integrate(int_f, -Inf, Inf, mu1=0, mu2=0.0, sd1=1, sd2=1)
 
 #e = sum(repmat(elig,nbasis,1).*inF.gaussmat_trunc, 2);
+
