@@ -10,7 +10,7 @@ source("von_mises_basis.R")
 ##
 
 # test basis set
-vset <- vm_circle_set(n_basis=12, weights=1:12, width_sd=0.2)
+vset <- vm_circle_set(n_basis=12, weights=1:12, width_sd=0.02)
 plot(vset$get_pvec(), type="l")
 plot(vset$get_vfunc(), type="l")
 vset$get_weights()
@@ -37,9 +37,16 @@ sum(ee$get_vfunc())
 
 plot(ee$basis_df$basis_norm)
 vset$set_eligibility_center(0)
-vset$eligibility$width_sd <- 0.2
+vset$eligibility$width_sd <- 0.02
 plot(vset$get_eligibilities())
 vset$get_eligibilities()
+
+df_elig <- data.frame(point=1:360, loc=vset$eligibility$basis_df$pvec, basis="e", value=vset$eligibility$get_basis())
+dd2 <- rbind(df_elig, dd)
+
+ggplot(dd2, aes(x=loc, y=value, color=factor(basis))) + geom_line()
+
+plot(vset$get_eligibilities())
 
 #em <- pracma::repmat(ee$get_vfunc(), 12, 1)
 #em <- replicate(12, ee$get_vfunc())

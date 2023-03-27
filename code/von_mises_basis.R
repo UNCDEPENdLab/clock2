@@ -14,8 +14,10 @@ vm_bf <- R6::R6Class(
       }
       return(y)
     },
+    
+    # setup data.frame containing basis function values across the circular space
     setup_bvals = function() {
-      x <- seq(-pi, pi, length.out=self$n_points)
+      x <- seq(0, 2*pi, length.out=self$n_points)
       mu <- self$center
       sd <- self$width_sd
       
@@ -76,7 +78,8 @@ vm_bf <- R6::R6Class(
     min_weight = 0,
     n_points=360, # resolution of basis
     basis_df = NULL, # data.frame of positions (x) and basis weights (y)
-    initialize = function(units = NULL, center = NULL, width_sd = NULL, weight = NULL, weight_sd = NULL, min_weight = NULL) {
+    initialize = function(n_points = NULL, units = NULL, center = NULL, width_sd = NULL, weight = NULL, weight_sd = NULL, min_weight = NULL) {
+      if (!is.null(n_points)) self$n_points <- n_points
       if (!is.null(units)) self$units <- units
       if (!is.null(center)) private$pvt_center <- center
       if (!is.null(width_sd)) private$pvt_width_sd <- width_sd
@@ -85,11 +88,12 @@ vm_bf <- R6::R6Class(
       if (!is.null(min_weight)) self$min_weight <- min_weight
       private$setup_bvals() # setup basis based on inputs
     },
+    #' @description get probability density function for basis (sum=1.0)
     get_pdf = function() {
       self$basis_df$pdf
     },
     #' @description get the position vector for the basis function
-    #' @return a vector of 
+    #' @return a vector of the positions tracked by the basis
     get_pvec = function() {
       self$basis_df$pvec
     },
@@ -111,9 +115,9 @@ vm_bf <- R6::R6Class(
 # ggplot(dd, aes(x=pvec, y=pdf)) + geom_line()
 # ggplot(dd, aes(x=pvec, y=basis)) + geom_line()
 
-vm_circle_contingency <- function(centers, weights, widths) {
+vm_circle_contingency <- function(centers, weights, widths, units="degrees") {
   gg <- lapply(seq_along(centers), function(ii) {
-    r <- vm_bf$new(weight=weights[ii], center=centers[ii], width_sd = widths[ii])
+    r <- vm_bf$new(weight=weights[ii], center=centers[ii], width_sd = widths[ii], units=units)
   })
   contingency <- rbf_set$new(elements = gg)
   return(contingency)
@@ -129,8 +133,8 @@ vm_circle_set <- function(n_basis=12, weights=0, width_sd=0.3) {
   
   d_theta <- (2*pi)/n_basis
   
-  # since circle wraps, we want to avoid adding a redundant basis function at -pi vs. at pi
-  loc <- seq(-pi, pi - d_theta, by=d_theta)
+  # since circle wraps, we want to avoid adding a redundant basis function at 0 vs. at 2*pi
+  loc <- seq(0, 2*pi - d_theta, by=d_theta)
   
   vset <- lapply(seq_along(loc), function(ii) {
     vm_bf$new(center=loc[ii], width_sd=width_sd[ii], weight=weights[ii])
@@ -152,6 +156,8 @@ vm_circle_set <- function(n_basis=12, weights=0, width_sd=0.3) {
 rbf_set <- R6::R6Class(
   "rbf_set",
   private = list(
+    units="radians",
+    
     # function that computes the proportion overlap between 
     compute_overlap = function(b1, b2) {
       e1 <- b1$get_basis()
@@ -168,6 +174,14 @@ rbf_set <- R6::R6Class(
       if (!is.null(elements)) {
         checkmate::assert_list(elements)
         sapply(elements, checkmate::assert_multi_class, classes=c("rbf", "vm_bf"))
+        unit_vec <- sapply(elements, "[[", "units")
+        if (length(unique(unit_vec)) > 1L) {
+          print(unit_vec)
+          stop("Units for elements do not match")
+        } else {
+          private$units <- elements[[1]]$units
+        }
+        
         # should probably validate that the pvec is identical for each element in the list...
         self$elements <- elements
       }
@@ -188,10 +202,13 @@ rbf_set <- R6::R6Class(
       checkmate::assert_number(value)
       self$eligibility$center <- value
     },
-    get_eligibilities = function() {
+    get_eligibilities = function(efunc=NULL) {
+      # allow for input of eligibility from outside
+      if (is.null(efunc)) efunc <- self$eligibility
+      checkmate::assert_multi_class(efunc, classes=c("rbf", "vm_bf"))
       # compute eligibility of each basis function against the eligibility
       sapply(self$elements, function(e) {
-        private$compute_overlap(e, self$eligibility)
+        private$compute_overlap(e, efunc)
       })
     },
     # get position vector
@@ -200,6 +217,11 @@ rbf_set <- R6::R6Class(
     },
     get_centers = function() {
       sapply(self$elements, function(x) x$center)
+    },
+    set_weights = function(v) {
+      checkmate::assert_numeric(v, len=length(self$elements))
+      sapply(seq_along(self$elements), function(ii) self$elements[[ii]]$weight <- v[ii])
+      return(self)
     },
     get_weights = function() {
       sapply(self$elements, function(x) x$weight)
@@ -223,10 +245,17 @@ rbf_set <- R6::R6Class(
       c <- self$get_centers()
       cnew <- c + v
       cnew <- sapply(cnew, function(x) {
-        if (x > 360) x = x - 360
-        else if (x < 0) x = 360 + x
-        else x
+        if (private$units == "degrees") {
+          if (x > 360) x <- x - 360
+          else if (x < 0) x <- 360 + x
+        } else {
+          x <- x %% (2*pi) # wrap any radians onto [0, 2*pi] interval
+          if (x > 2*pi) x <- x - 2*pi
+          else if (x < 0) x <- 2*pi + x
+        }
+        return(x)
       })
+      
       # update centers
       sapply(seq_along(cnew), function(ii) self$elements[[ii]]$center <- cnew[ii])
       return(self)
@@ -263,5 +292,113 @@ rbf <- R6::R6Class(
       dvec <- dvec/max(dvec)*self$weight #renormalize to max=1
       return(dvec)
     }
+  )
+)
+
+
+scepticc <- R6::R6Class(
+  "scepticc",
+  private = list(
+    pvt_bf_set = NULL,
+    pvt_eligibility = NULL,
+    pvt_alpha = 0.1,
+    pvt_gamma = 0.3,
+    pvt_beta = 2,
+    pvt_n_points = 50,
+    pvt_history = NULL,
+    pvt_contingency = NULL
+  ),
+  active = list(
+    alpha = function(v) {
+      if (missing(v)) return(private$pvt_alpha)
+      else {
+        checkmate::assert_number(v, lower=0.001, upper=0.999)
+        private$pvt_alpha <- v
+      }
+    },
+    gamma = function(v) {
+      if (missing(v)) return(private$pvt_gamma)
+      else {
+        checkmate::assert_number(v, lower=0.001, upper=0.999)
+        private$pvt_gamma <- v
+      }
+    },
+    #' @field beta temperature controlling softmax (higher values -> more stochastic)
+    beta = function(v) {
+      if (missing(v)) return(private$pvt_beta)
+      else {
+        checkmate::assert_number(v, lower=0.001, upper=1e4)
+        private$pvt_beta <- v
+      }
+    }
+  ),
+  public = list(
+    initialize = function(n_basis = 12, n_points = NULL, basis_sd = 0.3, weights_0 = 0, elig_sd = 0.3, 
+                          alpha=NULL, gamma=NULL, beta=NULL, contingency=NULL) {
+      checkmate::assert_number(n_basis, lower=2)
+      if (checkmate::test_number(weights_0)) weights_0 <- rep(weights_0, n_basis)
+      if (checkmate::test_number(basis_sd)) basis_sd <- rep(basis_sd, n_basis)
+      stopifnot(length(weights_0) == n_basis)
+      stopifnot(length(basis_sd) == n_basis)
+      
+      if (!is.null(n_points)) {
+        checkmate::assert_number(n_points, lower=2)
+        private$pvt_n_points <- n_points
+      }
+      
+      # setup positions
+      d_theta <- (2*pi)/n_basis
+      
+      # since circle wraps, we want to avoid adding a redundant basis function at 0 vs. at 2*pi
+      loc <- seq(0, 2*pi - d_theta, by=d_theta)
+      vset <- lapply(seq_along(loc), function(ii) {
+        vm_bf$new(n_points = private$pvt_n_points, center=loc[ii], width_sd=basis_sd[ii], weight=weights_0[ii])
+      })
+      
+      private$pvt_bf_set <- rbf_set$new(elements=vset)
+      private$pvt_eligibility <- vm_bf$new(n_points = private$pvt_n_points, center=0, width_sd=elig_sd, weight=1)
+      
+      if (!is.null(alpha)) self$alpha <- alpha
+      if (!is.null(beta)) self$beta <- beta
+      if (!is.null(gamma)) self$gamma <- gamma
+      
+      if (!is.null(contingency)) {
+        checkmate::assert_class(contingency, classes = "troll_world")
+        private$pvt_contingency <- contingency # assign by reference -- will update original object
+      }
+    },
+    get_weights = function() {
+      private$pvt_bf_set$get_weights()
+    },
+    update_weights = function(tau, sd=NULL, outcome, model="decay") {
+      checkmate::assert_number(tau)
+      private$pvt_eligibility$center <- tau
+      e <- private$pvt_bf_set$get_eligibilities(private$pvt_eligibility)
+      w <- private$pvt_bf_set$get_weights()
+      pe <-  outcome - w
+      if (model == "decay") {
+        decay <- -self$gamma * (1-e) * w  
+      } else {
+        decay <- 0
+      }
+      
+      w_new <- w + self$alpha*e*pe + decay
+      private$pvt_bf_set$set_weights(w_new)
+      return(self)
+    },
+    get_choice_probs = function() {
+      #v=x_t(1:nbasis)*ones(1,ntimesteps) .* gaussmat; %use vector outer product to replicate weight vector
+      #v_func = sum(v); %subjective value by timestep as a sum of all basis functions
+      
+      v_func <- private$pvt_bf_set$get_vfunc()
+      
+      p_choice <- (exp((v_func-max(v_func))/private$pvt_beta)) / (sum(exp((v_func-max(v_func))/private$pvt_beta))) # Divide by temperature
+      return(p_choice)
+    },
+    emit_choice = function() {
+      # sample choice based on softmax probabilities
+      sample(1:private$pvt_n_points, 1, prob = self$get_choice_probs())
+    },
+    
   )
 )

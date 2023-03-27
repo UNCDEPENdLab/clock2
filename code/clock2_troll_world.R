@@ -7,7 +7,7 @@ mean_val <- 10
 sd_val <- 2
 centers <- sample(seq(0, 360, by=10), ncenters, replace=FALSE)
 values <- sample(truncnorm::rtruncnorm(ncenters, a=0, mean=mean_val, sd=sd_val))
-width_sd <- 0.2 # fixed
+width_sd <- 20 # fixed
 
 bump_prominence <- 10
 bump_value <- mean_val*bump_prominence
@@ -23,9 +23,13 @@ bump_center <- sample(seq(0, 360, by=10), 1, replace=FALSE)
 
 
 # VM version
-contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights=c(values, bump_value), widths = rep(width_sd, ncenters+1))
+# contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights=c(values, bump_value), widths = rep(width_sd, ncenters+1))
 
-
+# test radians version
+centers <- (pi/180) * centers
+width_sd <- (pi/180) * width_sd
+bump_center <- (pi/180) * bump_center
+contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights=c(values, bump_value), widths = rep(width_sd, ncenters+1), units="radians")
 
 # a <- rbf$new(value=10, value_sd=1, center=100, width_sd = 20)
 # vv <- a$get_tvec()
@@ -41,12 +45,28 @@ contingency$get_weights()
 #contingency$get_centers()
 
 for (i in 1:10) {
-  contingency$apply_drift(2)
+  #contingency$apply_drift(30)
+  contingency$apply_drift((pi/180) * 30)
   print(contingency$get_centers())
+  #print(contingency$get_weights())
   plot(contingency$get_vfunc())
   Sys.sleep(.3)
 }
 
+deg2rad <- function(d, wrap2pi=TRUE) {
+  r <- d * (pi/180) 
+  if (isTRUE(wrap2pi)) r <- r %% (2*pi)
+  return(r)
+}
+
+rad2deg <- function(r, wrap360=TRUE) {
+  d <- r * 180/pi
+  if (isTRUE(wrap360)) d <- d %% 360
+  return(d)
+}
+
+# rather than applying drift sequentially, use the cumsum of a GRW process
+grwalk <- cumsum(rnorm(100, mean=0, sd=50))
 
 troll_world <- R6::R6Class(
   "troll_world",
@@ -82,7 +102,7 @@ troll_world <- R6::R6Class(
       }
       
       if (!is.null(drift_sd)) {
-        checkmate::assert_integerish(drift_sd, lower=1, len=1L)
+        checkmate::assert_integerish(drift_sd, lower=0, len=1L)
         self$drift_sd <- drift_sd
       }
       
@@ -100,8 +120,13 @@ troll_world <- R6::R6Class(
         else x
       })
       
+      browser()
+      
       # tmp fill
-      self$tvals[trial:self$n_trials, pos_vec] <- pracma::repmat(runif(size_deg), n=length(trial:self$n_trials), m=1)
+      # to fill rows of a matrix with the same vector, we need to recall that matrices are filled column-wise, not row-wise.
+      # Thus, we can either double transpose the matrix for the operation, or use rep() to replicate the vector for columnwise assignment
+      # https://stackoverflow.com/questions/11424047/assigning-values-to-rows-from-a-vector
+      self$tvals[trial:self$n_trials, pos_vec] <- runif(size_deg) #pracma::repmat(runif(size_deg), n=length(trial:self$n_trials), m=1)
       return(self)
     },
     get_original_values = function() {
@@ -154,6 +179,7 @@ troll_world <- R6::R6Class(
       self$spread <- spread[1:self$n_trials]
       self$epoch <- epoch[1:self$n_trials]
     },
+    #' @description rescale a vector to have a given 2*spread range around the mean and a designated mean
     v_rescale = function(x, spread = 20, mean_val=50) {
       #mx <- mean(x)
       y <- scales::rescale(x, to = c(mean_val - spread, mean_val + spread))
@@ -201,7 +227,7 @@ troll_world <- R6::R6Class(
   
 )
 
-tt <- troll_world$new(n_trials=100, tvec=contingency$get_tvec(), drift_sd=10)
+tt <- troll_world$new(n_trials=100, tvec=contingency$get_vfunc(), drift_sd=10)
 tt$apply_flex(high_avg = 1, high_spread = 0)
 plot(tt$spread)
 
@@ -225,95 +251,13 @@ for (i in 1:10) {
 # - erasure indicators fade instantly (one trial) because the values then enter the overall value distribution
 # and become a mix of softmax stochastic and uncertainty-driven. Only the first trial is clear on process.
 
+tt$erase_segment()
 
 
-xx <- tt$get_values_matrix()
+## try out sceptic agent
+sceptic_agent <- scepticc$new(n_basis=12, n_points=50)
+sceptic_agent$update_weights(tau=pi/2, outcome=100)
+sceptic_agent$emit_choice()
+sceptic_agent$get_choice_probs()
+sceptic_agent$get_weights()
 
-plot(xx[15,])
-
-
-exp_renorm <- function(x, beta=1, min_val, max_val) {
-  trans <- exp((x-max(x))/beta) #avoid floating point overflow
-  
-  #https://www.ibm.com/support/pages/transforming-different-likert-scales-common-scale
-  trans <- (max_val - min_val)*(trans - min(trans))/(max(trans) - min(trans)) + min_val
-  
-  # minshift <- min(trans) - min(x)
-  # trans <- trans - minshift
-  # rpeak <- (max(trans) - min(trans))/(max(x) - min(x))
-  return(trans)
-}
-
-#plot(exp_renorm(EV, beta=.1), type="l", main="SCEPTIC value compression", xlab = "Time", ylab = "Value")
-plot(EV, type="l", main="SCEPTIC value compression", xlab = "Time", ylab = "Value")
-lines(exp_renorm(EV, beta=1, min_val=10, max_val=30), type="l", col="red")
-#lines(exp_renorm(EV, beta=3), type="l", col="green")
-lines(exp_renorm(EV, beta=10, min_val=15, max_val=20), type="l", col="gray")
-# lines(exp_renorm(EV, beta=20), type="l", col="blue")
-# lines(exp_renorm(EV, beta=30), type="l", col="orange")
-# lines(exp_renorm(EV, beta=1000), type="l", col="orange")
-
-x1 <- exp_renorm(EV, beta=10, min_val=15, max_val=20) + 33.40002
-x2 <- exp_renorm(EV, beta=1, min_val=10, max_val=30) + 38.68209
-
-v_rescale <- function(x, spread = 20, mean_val=50) {
-  #mx <- mean(x)
-  y <- scales::rescale(x, to = c(mean_val - spread, mean_val + spread))
-  adjust <- mean_val - mean(y)
-  y <- y + adjust
-  return(y)
-}
-
-aa <- v_rescale(EV, spread=20)
-bb <- v_rescale(EV, spread=40)
-a2 <- v_rescale(bb, spread=20)
-
-summary(aa)
-summary(bb)
-
-plot(bb, type="l", col="blue")
-lines(aa, type="l")
-
-v_rescale <- function(x, dynamic_range=1, mean_val=50) {
-  #mx <- mean(x)
-  min_val <- min(x)
-  max_val <- min_val*dynamic_range
-  y <- scales::rescale(x, to = c(min_val, max_val))
-  adjust <- mean_val - mean(y)
-  y <- y + adjust
-  return(y)
-}
-
-aa <- v_rescale(EV, dynamic_range = 10)
-bb <- v_rescale(EV, dynamic_range = 6)
-cc <- v_rescale(EV, dynamic_range = 3)
-dd <- v_rescale(EV, dynamic_range = 1.5)
-
-# aa <- v_rescale(EV, dynamic_range = 1.5)
-# bb <- v_rescale(aa, dynamic_range = 10)
-# cc <- v_rescale(EV, dynamic_range = 10)
-
-plot(aa, type="l")
-lines(bb, type="l", col="blue")
-lines(cc, type="l", col="red")
-lines(dd, type="l", col="green")
-
-summary(aa)
-summary(bb)
-
-
-
-plot(aa, type="l")
-plot(bb, type="l")
-
-
-hist(aa, breaks = 10)
-hist(bb, breaks = 10)
-
-
-
-# m <- mean(df$value)
-# gaussmat <- sapply(seq_along(centers), function(x) {
-#   dvec <- dnorm(x=1:360, mean=centers[x], sd=15)
-#   dvec <- dvec/max(dvec)*floor_weights[x] #renormalize to max=1
-# })
