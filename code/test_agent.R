@@ -46,10 +46,10 @@ aa[1:5, 1:10]
 tt$reset_counter()
 tt$get_next_values()[1:10]
 
-for (ii in 1:nrow(aa)) {
-  plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii]), ylim = range(aa))
-  Sys.sleep(.1)
-}
+# for (ii in 1:nrow(aa)) {
+#   plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii]), ylim = range(aa))
+#   Sys.sleep(.1)
+# }
 
 # in progress
 #tt$erase_segment(30, trial=10)
@@ -74,6 +74,9 @@ sceptic_agent <- scepticc$new(n_basis=12, n_points=50, contingency=tt)
 # sceptic_agent$get_choice_probs()
 sceptic_agent$get_weights()
 learning_history <- sceptic_agent$run_contingency()
+
+
+system.time(aa <- replicate(100, sceptic_agent$run_contingency()))
 
 # returns history of basis weights
 #h <- reshape2::melt(sceptic_agent$get_weight_history(), varnames=c("trial", "basis"))
