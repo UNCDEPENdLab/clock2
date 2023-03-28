@@ -109,7 +109,7 @@ scepticc <- R6::R6Class(
       h <- self$get_weight_history()
       vhist <- t(sapply(seq_len(nrow(h)), function(i) {
         tmp_bf$set_weights(h[i,])
-        tmp_bf$get_vfunc()
+        tmp_bf$get_wfunc()
       }))
       return(vhist)
     },
@@ -122,7 +122,7 @@ scepticc <- R6::R6Class(
       #v_func = sum(v); %subjective value by timestep as a sum of all basis functions
 
       if (model == "sceptic") {
-        v_func <- private$pvt_bf_set$get_vfunc()
+        v_func <- private$pvt_bf_set$get_wfunc()
         p_choice <- (exp((v_func - max(v_func)) / private$pvt_beta)) / (sum(exp((v_func - max(v_func)) / private$pvt_beta))) # Divide by temperature
       } else if (model == "random") {
         n_t <- length(private$pvt_bf_set$get_pvec())

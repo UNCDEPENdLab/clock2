@@ -7,19 +7,23 @@ using namespace arma;
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::export]]
 
-Rcpp::NumericMatrix vm_bf(int n_points, double mu, double sd) {
+Rcpp::NumericMatrix vm_cpp(int n_points, double mu, double sd, bool degrees=false) {
   //arma::mat vm_bf(int n_points, double mu, double sd) { // definition with arma return
   
   // NumericMatrix df(n_points, 4);
-  // 
   // NumericMatrix::Column pvec = df(_ , 0);  // Reference to the first column
   // NumericMatrix::Column pdf = df(_ , 1);  // Reference to the second column
   // NumericMatrix::Column basis  = df(_ , 2);  // Reference to the third column
   // NumericMatrix::Column basis_norm  = df(_ , 3);  // Reference to the fourth column
-  
+
+  if (degrees) {
+    mu = (M_PI / 180) * mu;
+    sd = (M_PI / 180) * sd;
+  }
+
+  //Rcout << "mu: " << mu << ", sd: " << sd << endl;
+
   arma::mat df(n_points, 4);
-  
-  double kappa = 1/sd;
   
   // for reasons that remain mysterious to me, using the pointer to a column with linspace generates a functioning
   // vector (e.g., the calculations and Rcout below work), but the values are not actually preserved in the resulting matrix
@@ -36,6 +40,8 @@ Rcpp::NumericMatrix vm_bf(int n_points, double mu, double sd) {
   x = linspace<vec>(0, 2*M_PI, n_points); // generate positions between 0 and 2*pi
   //Rcout << x << endl;
   
+  double kappa = 1/sd; // concentration parameter
+  
   // von Mises probability density function (pdf)
   pdf = arma::exp(kappa * arma::cos(x - mu))/(2*M_PI*R::bessel_i(kappa, 0, 1));
   
@@ -49,16 +55,21 @@ Rcpp::NumericMatrix vm_bf(int n_points, double mu, double sd) {
   basis_norm = pdf/m;
   
   //debugging attempts
-  //x = pdf/5;
-  //df.col(0) = pdf/5;
-  //arma::vec w(df.colptr(4), n_points, false);
-  //w = pdf/5;
-  //df.col(4) = linspace<vec>(0, 2*M_PI, n_points);
+  //x = pdf/5; // works
+  //df.col(0) = pdf/5; // works
+  //arma::vec w(df.colptr(0), n_points, false);
+  //w = pdf/5; //works
+  //w = linspace<vec>(0, 2*M_PI, n_points); // FAILS
+  //df.col(4) = linspace<vec>(0, 2*M_PI, n_points); // works
   
+  // convert position vector to degrees if needed
+  if (degrees)
+    x = x * (180 / M_PI);
+
   df.col(0) = x;
-  
+
   // It's a little slower to wrap as a numeric matrix and add column names, but worth it for convenience
-  Rcpp::NumericMatrix rdf(wrap(df)); // convert
+  Rcpp::NumericMatrix rdf(wrap(df)); // convert to Rcpp matrix
   colnames(rdf) = Rcpp::CharacterVector::create("pos", "pdf", "basis", "basis_norm");
   
   return(rdf);

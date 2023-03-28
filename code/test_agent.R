@@ -27,13 +27,13 @@ contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights 
 # vv <- a$get_tvec()
 
 # contingency <- rbf_set$new(elements = gg)
-plot(contingency$get_vfunc())
+plot(contingency$get_wfunc())
 
 contingency$get_centers()
 contingency$get_weights()
 
 
-tt <- troll_world$new(n_trials=100, values=contingency$get_vfunc(), drift_sd=5)
+tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=5)
 tt$apply_flex(high_avg = 1, high_spread = 0)
 plot(tt$spread)
 plot(tt$get_starting_values())

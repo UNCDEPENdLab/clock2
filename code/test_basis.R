@@ -44,7 +44,7 @@ contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights=
 # vv <- a$get_tvec()
 
 #contingency <- rbf_set$new(elements = gg)
-plot(contingency$get_vfunc())
+plot(contingency$get_wfunc())
 
 contingency$get_centers()
 contingency$get_weights()
@@ -58,7 +58,7 @@ for (i in 1:10) {
   contingency$apply_drift((pi/180) * 30)
   print(contingency$get_centers())
   #print(contingency$get_weights())
-  plot(contingency$get_vfunc())
+  plot(contingency$get_wfunc())
   Sys.sleep(.3)
 }
 
@@ -84,14 +84,14 @@ grwalk <- cumsum(rnorm(100, mean=0, sd=50))
 # test basis set
 vset <- vm_circle_set(n_basis=12, weights=1:12, width_sd=0.02)
 plot(vset$get_pvec(), type="l")
-plot(vset$get_vfunc(), type="l")
+plot(vset$get_wfunc(), type="l")
 vset$get_weights()
 vset$get_centers()
 
 library(ggplot2)
 library(dplyr)
-df <- data.frame(pos=vset$get_pvec(), y=vset$get_vfunc())
-df <- data.frame(pos=vset$get_pvec(), y=vset$get_vfunc())
+df <- data.frame(pos=vset$get_pvec(), y=vset$get_wfunc())
+df <- data.frame(pos=vset$get_pvec(), y=vset$get_wfunc())
 ggplot(df, aes(x=pos, y=y)) + geom_line() + coord_polar()
 
 x <- vset$get_basis()
@@ -104,25 +104,25 @@ ggplot(dd, aes(x=loc, y=value, color=factor(basis))) + geom_line()
 
 ee <- vset$eligibility
 ee$center <- 0.0
-plot(ee$get_vfunc())
-sum(ee$get_vfunc())
+plot(ee$get_wfunc())
+sum(ee$get_wfunc())
 
-plot(ee$basis_df$basis_norm)
+plot(ee$basis_df[, "basis_norm"])
 vset$set_eligibility_center(0)
 vset$eligibility$width_sd <- 0.02
 plot(vset$get_eligibilities())
 vset$get_eligibilities()
 
-df_elig <- data.frame(point=1:360, loc=vset$eligibility$basis_df$pvec, basis="e", value=vset$eligibility$get_basis())
+df_elig <- data.frame(point=1:360, loc=vset$eligibility$basis_df[,"pos"], basis="e", value=vset$eligibility$get_basis())
 dd2 <- rbind(df_elig, dd)
 
 ggplot(dd2, aes(x=loc, y=value, color=factor(basis))) + geom_line()
 
 plot(vset$get_eligibilities())
 
-#em <- pracma::repmat(ee$get_vfunc(), 12, 1)
-#em <- replicate(12, ee$get_vfunc())
-em <- replicate(12, ee$basis_df$basis_norm)
+# em <- pracma::repmat(ee$get_wfunc(), 12, 1)
+# em <- replicate(12, ee$get_wfunc())
+em <- replicate(12, ee$basis_df[, "basis_norm"])
 b <- vset$get_basis()
 ep <- em * b
 
@@ -132,12 +132,12 @@ plot(colSums(ep))
 ep <- reshape2::melt(ep)
 ggplot(ep, aes(x=Var1, y=weight, color=factor(Var2))) + geom_line()
 
-plot(ee$get_vfunc())
+plot(ee$get_wfunc())
 plot(b[,7])
 
 # verification that these are identical
-cor(ee$get_vfunc(), b[,7])
-summary(ee$get_vfunc() - b[,7])
+cor(ee$get_wfunc(), b[,7])
+summary(ee$get_wfunc() - b[,7])
 
 # note that when we multiply two Gaussians together, the effective SD shrinks and even when the overlap is perfect,
 # the maximum reaches a weight of .68.
@@ -165,7 +165,7 @@ basis <- cbind(
 
 basis <- basis/colSums(basis)
 apply(basis, 2, sum)
-plot(basis[,2])
+plot(basis[, 2])
 
 elig_mat <- replicate(3, elig)
 
@@ -184,9 +184,9 @@ df <- data.frame(
 # https://rpsychologist.com/calculating-the-overlap-of-two-normal-distributions-using-monte-carlo-integration
 colSums(df[,-1])
 
-plot(elig_prod[,1], type="l")
-lines(elig_prod[,2], type="l", col="blue")
-lines(elig_prod[,3], type="l", col="orange")
+plot(elig_prod[, 1], type="l")
+lines(elig_prod[, 2], type="l", col="blue")
+lines(elig_prod[, 3], type="l", col="orange")
 lines(elig/sum(elig), type="l", col="green") #original elig -- rescaled to AUC1
 
 # Critically, note that p1 -- the product of the eligbility function and the basis aligned to the same mean is more narrow
@@ -195,39 +195,39 @@ dfm <- df %>% tidyr::gather(key="key", value = "value", -t)
 ggplot(dfm, aes(x=t, y=value, color=key)) + geom_line()
 
 
-sum((ee$basis_df$basis_norm*1.5) *b[,7])
+sum((ee$basis_df[, "basis_norm"] * 1.5) * b[, 7])
 
 
-sum((ee$basis_df$basis_norm*1.5) *b[,7])
+sum((ee$basis_df[, "basis_norm"] * 1.5) * b[, 7])
 
-sum(ee$basis_df$basis_norm *b[,7])
+sum(ee$basis_df[, "basis_norm"] * b[, 7])
 
-plot(ee$basis_df$basis_norm *b[,7], type="l")
+plot(ee$basis_df[, "basis_norm"] *b[,7], type="l")
 lines(b[,7], type="l", col="blue")
 
-plot(convolve(b[,7], ee$basis_df$basis_norm), type="l")
+plot(convolve(b[, 7], ee$basis_df[, "basis_norm"]), type = "l")
 
 plot(b[,7], type="l")
-plot(ee$basis_df$basis_norm, type="l")
+plot(ee$basis_df[, "basis_norm"], type = "l")
 
 # The correct approach is to normalize all functions to have AUC 1.0 and then to take the 
 # pmin -- parallel minima -- to understand their overlap.
 sum(b[,7])
-sum(ee$basis_df$basis)
+sum(ee$basis_df[, "basis"])
 
 
-dd <- density(ee$basis_df$basis_norm, n = 360)
-cbind(ee$basis_df$basis, dd$y)
+dd <- density(ee$basis_df[, "basis_norm"], n = 360)
+cbind(ee$basis_df[, "basis"], dd$y)
 
-sum(pmin(b[,7], ee$basis_df$basis))
-sum(pmin(b[,8], ee$basis_df$basis))
-sum(pmin(b[,6], ee$basis_df$basis))
-sum(pmin(b[,5], ee$basis_df$basis))
-sum(pmin(b[,1], ee$basis_df$basis))
+sum(pmin(b[, 7], ee$basis_df[, "basis"]))
+sum(pmin(b[, 8], ee$basis_df[, "basis"]))
+sum(pmin(b[, 6], ee$basis_df[, "basis"]))
+sum(pmin(b[, 5], ee$basis_df[, "basis"]))
+sum(pmin(b[, 1], ee$basis_df[, "basis"]))
 
 
-cbind(pmin(b[,1], ee$basis_df$basis))
-sum(apply(cbind(pmin(b[,7], ee$basis_df$basis)), 1, min))
+cbind(pmin(b[,1], ee$basis_df[, "basis"]))
+sum(apply(cbind(pmin(b[, 7], ee$basis_df[, "basis"])), 1, min))
 
 
 sum(b[,7])

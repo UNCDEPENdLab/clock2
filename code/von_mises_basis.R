@@ -5,6 +5,17 @@ vm_bf <- R6::R6Class(
     pvt_center = 0, # center of basis
     pvt_width_sd = 1, # SD of basis
     pvt_weight = 5, # height of basis
+    pvt_setup_complete = FALSE,
+    pvt_basis_weight_vec = NULL,
+
+    # add fast C++ version of the von Mises basis setup
+    vm_cpp = Rcpp::cppFunction(code = readLines("code/vm_bf.cpp"), depends = c("RcppArmadillo")),
+
+    # cpp version of setup
+    setup_bvals = function() {
+      self$basis_df <- private$vm_cpp(self$n_points, self$center, self$width_sd, self$units=="degrees")
+      private$update_weight() # populate weight
+    },
 
     # von Mises: membership function when normalize=TRUE or PDF when normalize=FALSE
     vm_mf = function(x=NULL, mu, kappa, normalize=TRUE) {
@@ -16,27 +27,32 @@ vm_bf <- R6::R6Class(
     },
 
     # setup data.frame containing basis function values across the circular space
-    setup_bvals = function() {
-      x <- seq(0, 2*pi, length.out=self$n_points)
-      mu <- self$center
-      sd <- self$width_sd
+    # setup_bvals = function() {
+    #   x <- seq(0, 2*pi, length.out=self$n_points)
+    #   mu <- self$center
+    #   sd <- self$width_sd
 
-      # convert to radians for basis calculation
-      if (self$units == "degrees") {
-        mu <- (pi/180) * mu
-        sd <- (pi/180) * sd
-        pvec <- x/(pi/180)
-      } else {
-        pvec <- x
-      }
+    #   # convert to radians for basis calculation
+    #   if (self$units == "degrees") {
+    #     mu <- (pi/180) * mu
+    #     sd <- (pi/180) * sd
+    #     pvec <- x/(pi/180)
+    #   } else {
+    #     pvec <- x
+    #   }
 
-      vm <- private$vm_mf(x=x, mu=mu, kappa=1/sd, normalize=FALSE) # probability density
-      nvm <- vm/max(vm) # normalized max=1.0 basis (membership function)
-      avm <- vm/sum(vm) # AUC 1.0 basis (used for update eligibility)
-      weights <- nvm*self$weight
-      #weights <- avm*self$weight #use AUC version
-      df <- data.frame(pvec = pvec, pdf=vm, basis_norm=nvm, basis=avm, weights=weights)
-      self$basis_df <- df
+    #   vm <- private$vm_mf(x=x, mu=mu, kappa=1/sd, normalize=FALSE) # probability density
+    #   avm <- vm/sum(vm) # AUC 1.0 basis (used for update eligibility)
+
+    #   self$basis_df <- data.frame(pvec = pvec, pdf = vm, basis = avm)
+    #   private$update_weight() # populate weight
+    #   private$pvt_basis_norm <- NULL # reset normalized basis cache
+    # },
+
+    # lightweight function to update the height of the basis function when its weight changes
+    update_weight = function() {
+      # refresh the weights column only
+      private$pvt_basis_weight_vec <- self$basis_df[,"basis_norm"] * self$weight
     }
   ),
   active = list(
@@ -57,7 +73,7 @@ vm_bf <- R6::R6Class(
       } else {
         checkmate::assert_number(value)
         private$pvt_width_sd <- value
-        private$setup_bvals() # re-define basis based on updated center
+        private$setup_bvals() # re-define basis based on updated width
       }
     },
     #' @field weight The weight (aka height) of the basis function
@@ -67,7 +83,7 @@ vm_bf <- R6::R6Class(
       } else {
         checkmate::assert_number(v)
         private$pvt_weight <- v
-        private$setup_bvals() # re-define basis based on updated center
+        private$update_weight() # update weight in basis representation
       }
     }
   ),
@@ -90,18 +106,22 @@ vm_bf <- R6::R6Class(
     },
     #' @description get probability density function for basis (sum=1.0)
     get_pdf = function() {
-      self$basis_df$pdf
+      self$basis_df[, "pdf"]
     },
     #' @description get the position vector for the basis function
     #' @return a vector of the positions tracked by the basis
     get_pvec = function() {
-      self$basis_df$pvec
+      self$basis_df[, "pos"]
     },
-    get_basis = function() {
-      self$basis_df$basis
+    get_basis = function(normalize=FALSE) {
+      if (normalize) {
+        self$basis_df[, "basis_norm"]
+      } else {
+        self$basis_df[, "basis"]
+      }
     },
-    get_vfunc = function() {
-      self$basis_df$weights
+    get_wfunc = function() {
+      private$pvt_basis_weight_vec
     }
   )
 )
@@ -157,15 +177,18 @@ rbf_set <- R6::R6Class(
   "rbf_set",
   private = list(
     units="radians",
-
-    # function that computes the proportion overlap between 
-    compute_overlap = function(b1, b2) {
-      e1 <- b1$get_basis()
-      e2 <- b2$get_basis()
-      stopifnot(abs(sum(e1) - 1) < 1e-5) # verify AUC = 1
-      stopifnot(abs(sum(e2) - 1) < 1e-5)
-      sum(pmin(e1, e2))
-    }
+    
+    # add fast C++ version of the von Mises basis setup
+    compute_overlap = Rcpp::cppFunction(code = readLines("code/compute_overlap.cpp"))
+    
+    # function that computes the proportion overlap between two vm bfs
+    # compute_overlap = function(b1, b2) {
+    #   e1 <- b1$get_basis()
+    #   e2 <- b2$get_basis()
+    #   stopifnot(abs(sum(e1) - 1) < 1e-5) # verify AUC = 1
+    #   stopifnot(abs(sum(e2) - 1) < 1e-5)
+    #   sum(pmin(e1, e2))
+    # }
   ),
   public = list(
     elements = list(),
@@ -208,7 +231,7 @@ rbf_set <- R6::R6Class(
       checkmate::assert_multi_class(efunc, classes=c("rbf", "vm_bf"))
       # compute eligibility of each basis function against the eligibility
       sapply(self$elements, function(e) {
-        private$compute_overlap(e, efunc)
+        private$compute_overlap(e$get_basis(), efunc$get_basis())
       })
     },
     # get position vector
@@ -226,8 +249,8 @@ rbf_set <- R6::R6Class(
     get_weights = function() {
       sapply(self$elements, function(x) x$weight)
     },
-    get_vfunc = function() {
-      rowSums(sapply(self$elements, function(x) x$get_vfunc()))
+    get_wfunc = function() {
+      rowSums(sapply(self$elements, function(x) x$get_wfunc()))
     },
     get_basis = function() {
       sapply(self$elements, function(x) x$get_basis())
@@ -287,7 +310,7 @@ rbf <- R6::R6Class(
       if (!is.null(weight_sd)) self$weight_sd <- weight_sd
       if (!is.null(min_weight)) self$min_weight <- min_weight
     },
-    get_vfunc = function() {
+    get_wfunc = function() {
       dvec <- dnorm(x=1:360, mean=self$center, sd=self$width_sd)
       dvec <- dvec/max(dvec)*self$weight #renormalize to max=1
       return(dvec)
