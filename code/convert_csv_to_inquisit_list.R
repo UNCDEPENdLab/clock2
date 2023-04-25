@@ -20,7 +20,7 @@ convert_csv_to_inquisit_list <- function(csv_file = '', row_prefix ='trial_'){
   options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
   iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR-1)) # import csv as data frame
   df0 <- NULL
-  for (iR in 1:nR){ # start at 2, ignore index
+  for (iR in 1:nR){ # start at 1st row
     for (iC in 2:nC){ # start at 2, ignore col names
       if (iC==2){
         df0 <- paste0('<list ',row_prefix,as.character(iR-1),'>','\n','/ items = ( ',df[iR,iC])
