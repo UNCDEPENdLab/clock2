@@ -18,7 +18,7 @@ convert_csv_to_inquisit_list <- function(csv_file = '', row_prefix ='trial_'){
   nR <- nrow(df) # these will be separate lists
   nC <- ncol(df) # these will be the items in each list
   options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
-  iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR-1)) # import csv as data frame
+  iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) # import csv as data frame
   df0 <- NULL
   for (iR in 1:nR){ # start at 1st row
     for (iC in 2:nC){ # start at 2, ignore col names
@@ -30,9 +30,9 @@ convert_csv_to_inquisit_list <- function(csv_file = '', row_prefix ='trial_'){
         df0 <- paste0(df0,',',df[iR,iC],')','\n','/ selectionrate = always','\n','/ selectionmode=list.',row_prefix,as.character(iR-1),'.currentindex','\n','</list>')
       }
     }
-    iqx_formatted_df[iR-1,1] <- df0 
+    iqx_formatted_df[iR,1] <- df0 
   }
-  write.table(iqx_formatted_df,'test.txt',row.names=F,col.names=F,quote=F)
+  write.table(iqx_formatted_df,'times.txt',row.names=F,col.names=F,quote=F)
   options("encoding" = "native.enc") # change encoding back to native
   
   
