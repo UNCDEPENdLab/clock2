@@ -17,9 +17,9 @@ for (iR in 1:nR){
     if (iT==1){
       df0 <- paste0('if (values.trialCount == ',iR,' ){ \n if (values.rt_shifted > ',df_t$t[iT], ' & values.rt_shifted <= ', df_t$t[iT+1],') {','\n','values.mag = ',df[iR,iT],'; \n')
     } else if (iT>1 & iT<nT-2){
-      df0 <- paste0(df0,'else if (values.rt_shifted > ',df_t$t[iT], ' & values.rt_shifted <= ',df_t$t[iT+1],') { \n','values.mag = ',df[iR,iT],'; \n')
+      df0 <- paste0(df0,'} else if (values.rt_shifted > ',df_t$t[iT], ' & values.rt_shifted <= ',df_t$t[iT+1],') { \n','values.mag = ',df[iR,iT],'; \n')
     } else if (iT == nT-1){
-      df0 <- paste0(df0,'else if (values.rt_shifted < ',df_t$t[iT], ' & values.rt_shifted <= ',df_t$t[iT+1],') { \n','values.mag = ',df[iR,iT],'; \n',' }','\n } ')
+      df0 <- paste0(df0,'} else if (values.rt_shifted < ',df_t$t[iT], ' & values.rt_shifted <= ',df_t$t[iT+1],') { \n','values.mag = ',df[iR,iT],'; \n',' }','\n } ')
     }
   }
   iqx_formatted_df[iR,1] <- df0 
