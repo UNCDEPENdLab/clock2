@@ -1,16 +1,16 @@
-setwd("~/Data_Analysis/clock2")
+setwd("~/clock2")
 source("code/von_mises_basis.R")
 source("code/clock2_troll_world.R")
 source("code/scepticc.R")
 library(tidyverse)
-ncenters <- 6
-mean_val <- 10
-sd_val <- 2
-centers <- sample(seq(0, 360, by = 10), ncenters, replace = FALSE)
+ncenters <- 6 # how many gaussians there are
+mean_val <- 10 # mean reward rate
+sd_val <- 2 # standard deviation of reward / range of rewards
+centers <- sample(seq(0, 360, by = 10), ncenters, replace = FALSE) # line up gaussians here
 values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
-width_sd <- 20 # fixed
+width_sd <- 20 # fixed, how wide are the underlying Gaussians
 
-bump_prominence <- 10
+bump_prominence <- 10 # bump will always be higher, but it will change
 bump_value <- mean_val * bump_prominence
 bump_center <- sample(seq(0, 360, by = 10), 1, replace = FALSE)
 
@@ -21,6 +21,7 @@ bump_center <- sample(seq(0, 360, by = 10), 1, replace = FALSE)
 centers <- (pi / 180) * centers
 width_sd <- (pi / 180) * width_sd
 bump_center <- (pi / 180) * bump_center
+# 
 contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians")
 
 # a <- rbf$new(value=10, value_sd=1, center=100, width_sd = 20)
@@ -33,23 +34,23 @@ contingency$get_centers()
 contingency$get_weights()
 
 
-tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=5)
+tt <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=5) # set up troll world
 tt$apply_flex(high_avg = 1, high_spread = 0)
-plot(tt$spread)
+plot(tt$spread) # prominence of bump vs floor over trials, shows switches, bump drifts in Gaussian random walk
 plot(tt$get_starting_values())
 # aa <- tt$get_values_matrix("original", quiet=F) # original values (should be constant over trials)
 # aa <- tt$get_values_matrix("drift", quiet=F) # drift alone
 # aa <- tt$get_values_matrix("flex", quiet=F) # flex alone
-aa <- tt$get_values_matrix("objective", quiet=F) # all manipulations
+aa <- tt$get_values_matrix("objective", quiet=F) # all manipulations, matrix of expected values, p_reward =0.7 fixed for now
 
 aa[1:5, 1:10]
 tt$reset_counter()
 tt$get_next_values()[1:10]
 
-# for (ii in 1:nrow(aa)) {
-#   plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii]), ylim = range(aa))
-#   Sys.sleep(.1)
-# }
+for (ii in 1:nrow(aa)) {
+  plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii]), ylim = range(aa))
+  Sys.sleep(.1)
+}
 
 # in progress
 #tt$erase_segment(30, trial=10)
