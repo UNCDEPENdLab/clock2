@@ -11,7 +11,7 @@
 #' @export
 #' @author Andrew E. Papale
 
-convert_csv_to_inquisit_list <- function(csv_file = '', row_prefix ='trial_'){
+convert_csv_to_inquisit_list <- function(csv_file = '', row_prefix ='rt_'){
 
   library(tidyverse)
   df <- read_csv(csv_file)
@@ -27,7 +27,7 @@ convert_csv_to_inquisit_list <- function(csv_file = '', row_prefix ='trial_'){
       } else if(iC>2 & iC < nC){
         df0 <- paste0(df0,', ',df[iR,iC])
       }else if (iC==nC){
-        df0 <- paste0(df0,',',df[iR,iC],')','\n','/ selectionrate = always','\n','/ selectionmode=list.',row_prefix,as.character(iR-1),'.currentindex','\n','</list>')
+        df0 <- paste0(df0,',',df[iR,iC],')','\n','/ poolsize = 300 \n / selectionmode=sequence','\n','</list>')
       }
     }
     iqx_formatted_df[iR,1] <- df0 
