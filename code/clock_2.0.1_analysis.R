@@ -5,13 +5,14 @@ library(brms)
 # 2023-05-03 AndyP
 # clock 2.0.1 analysis
 
+
 # set paths (will be good to make this more user-general)
 sys <- Sys.info()
 if (sum(str_detect(Sys.info(), "Alex"))>1) { base_dir <- "~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/"} else {
   base_dir <- '~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner' }# on skinner}
 output_dir <- "~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/skinner/data/prolific/clock_v2_pilot"
 # design_file <- '~/code/clock2/2022-04-25-DesignFile.csv' # in Michael's clock2 repo
-design_file <- '~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/skinner/data/prolific/clock_v2_pilot/new_cotingencies_05-19-23/2022-05-08-DesignFile.csv'
+design_file <- '/Volumes/Users/Andrew/2022-05-08-DesignFile.csv'
 design <- as.matrix(read_csv(design_file)) %>% 
   as_tibble() %>% select(-`...1`) %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("V"), names_to = "trial") %>%
   mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
@@ -23,10 +24,8 @@ ggplot(design, aes(trial, vmax)) + geom_line() + scale_color_viridis_c()
 median_vmax = median(design$vmax)
 
 # combine behavioral data from two batches of 25 Prolific subjects
-df1 <- read_csv(paste0(base_dir,'/skinner/data/prolific/clock_v2_pilot/pilot_v3_2_Mushrooms_06-16-23/processed/all_processed_data_2023-06-19.csv')) %>% 
-  rbind(read_csv(paste0(base_dir,'/skinner/data/prolific/clock_v2_pilot/pilot_v3_Mushrooms_05-19-23/processed/all_processed_data_2023-05-22.csv'))) %>%
-  filter(trialcode=='dispFeedback_noU' | trialcode=='dispFeedback_U') %>% rowwise() %>% # the score is calculated here, the variable of interest is rt_shifted
-  mutate(u_present = (!is.na(windPos_out) & local_uncertainty == "wind") | (!is.na(fogPos_out) & local_uncertainty == "cloud"), 
+df1 <- read_csv('/Volumes/Users/Andrew/papalea_prosper_eeg_clock_v2_0_3_raw_2307031911.csv') %>% filter(trialcode=='dispFeedback_noU' | trialcode=='dispFeedback_U') # the score is calculated here, the variable of interest is rt_shifted
+df1 <- df1 %>%  mutate(u_present = (!is.na(windPos_out) & local_uncertainty == "wind") | (!is.na(fogPos_out) & local_uncertainty == "cloud"), 
          att_present = (!is.na(windPos_out) & local_uncertainty == "cloud") | (!is.na(fogPos_out) & local_uncertainty == "wind"),
          u_location = case_when(
            !is.na(windPos_out) & local_uncertainty == "wind" ~ windPos_out,
@@ -37,9 +36,13 @@ df1 <- read_csv(paste0(base_dir,'/skinner/data/prolific/clock_v2_pilot/pilot_v3_
            !is.na(windPos_out) & local_uncertainty == "fog" ~ windPos_out,
            !is.na(fogPos_out) & local_uncertainty == "wind" ~ fogPos_out,
            T ~ runif(1, 0, 360))
-         ) %>% rename(trial = meta_trialCount) %>%
-  filter(is.na(windPos_out) | is.na(fogPos_out)) %>% merge(design, by = "trial") %>%
-  mutate(resp_theta = pos_shifted * pi/180,
+         ) %>% rename(trial = meta_trialCount)
+  
+  df1 <- df1 %>% mutate(trial_to_merge = list.rt_0.currentindex)
+  design <- design %>% mutate(trial_to_merge = trial)
+  
+  df1 <- inner_join(df1,design,by='trial')
+  df1 <- df1 %>%mutate(resp_theta = pos_shifted * pi/180,
          resp_theta_c = resp_theta - pi,
          vmax_theta = vmax_location * pi/180,
          vmax_theta_c = vmax_theta - pi,
@@ -56,7 +59,10 @@ df1 <- read_csv(paste0(base_dir,'/skinner/data/prolific/clock_v2_pilot/pilot_v3_
 
 # sanity checks on behavioral data: ensure we know where erasures/control stimuli were
 ggplot(df1, aes(trial, u_present, color = as.factor(chooseUncertainty))) + geom_point() + facet_wrap(~subject)
-ggplot(df1, aes(trial, local_uncertainty, color = as.factor(chooseFog1))) + geom_point() + facet_wrap(~subject) + geom_text(aes(x = 50, y = .5, label = local_uncertainty))
+pdf('test.pdf',height=18,width=16)
+gg1 <- ggplot(df1, aes(trial, local_uncertainty, color = as.factor(chooseFog1))) + geom_point(size=1) + facet_wrap(~subject) + geom_text(aes(x = 50, y = .5, label = local_uncertainty))
+print(gg1)
+dev.off()
 # ggplot(df, aes(trial, uncertainty_block, color = as.factor(chooseWind2))) + geom_point() + facet_wrap(~subject) + geom_text(aes(x = 50, y = .5, label = local_uncertainty))
 # ggplot(df, aes(trial, uncertainty_block, color = as.factor(uncertainty_present))) + geom_point() + facet_wrap(~subject) + geom_text(aes(x = 50, y = .5, label = local_uncertainty))
 # 
@@ -78,20 +84,20 @@ car::Anova(m1, '3')
 m1a_1 <- lmer(pos_shifted ~ scale(vmax_location)*scale(vmax) + resp_theta_c_lag * outcome_lag + (1|subject), df1 )
 summary(m1a_1)
 car::Anova(m1a_1, '3')
-car::vif(m1a)
+car::vif(m1a_1)
 # add uncertainty
-m2_1 <- lmer(pos_shifted ~ scale(vmax_location)*scale(vmax) + scale(u_location)*scale(vmax) + (1|subject), 
+m2_1 <- lmerTest::lmer(pos_shifted ~ scale(vmax_location)*scale(vmax) + scale(u_location)*scale(vmax) + (1|subject), 
            df1)
 summary(m2_1)
 car::Anova(m2_1, '3')
 # full model with uncertainty and attentional control
-m5_1 <- lmer(pos_shifted ~ scale(vmax_location) + scale(vmax_location):scale(vmax) + 
+m5_1 <- lmerTest::lmer(pos_shifted ~ scale(vmax_location) + scale(vmax_location):scale(vmax) + 
                scale(u_location):u_present + scale(u_location):u_present:scale(vmax) + scale(att_location):att_present + scale(att_location):att_present:scale(vmax) + 
              resp_theta_c_lag*omission_lag +
              (1|subject), 
            df1)
 summary(m5_1)
-car::Anova(m4, '3')
+car::Anova(m5_1, '3')
 
 # simulate various phantom erasure/control locations
 # simpler alternative: use the last location
