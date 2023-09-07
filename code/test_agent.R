@@ -3,12 +3,12 @@ source("code/von_mises_basis.R")
 source("code/clock2_troll_world.R")
 source("code/scepticc.R")
 library(tidyverse)
-ncenters <- 6 # how many gaussians there are
+ncenters <- 9 # how many gaussians there are
 mean_val <- 10 # mean reward rate
 sd_val <- 2 # standard deviation of reward / range of rewards
 centers <- sample(seq(0, 360, by = 10), ncenters, replace = FALSE) # line up gaussians here
 values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
-width_sd <- 20 # fixed, how wide are the underlying Gaussians
+width_sd <- 15 # fixed, how wide are the underlying Gaussians
 
 bump_prominence <- 10 # bump will always be higher, but it will change
 bump_value <- mean_val * bump_prominence
@@ -34,7 +34,7 @@ contingency$get_centers()
 contingency$get_weights()
 
 
-tt <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=5) # set up troll world
+tt <- troll_world$new(n_trials=364, values=contingency$get_wfunc(), drift_sd=5) # set up troll world
 tt$apply_flex(high_avg = 1, high_spread = 0)
 plot(tt$spread) # prominence of bump vs floor over trials, shows switches, bump drifts in Gaussian random walk
 plot(tt$get_starting_values())

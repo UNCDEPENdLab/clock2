@@ -14,10 +14,41 @@ if (sum(str_detect(Sys.info(), "Alex"))>1) { base_dir <- "~/Library/CloudStorage
 output_dir <- "~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/skinner/data/prolific/clock_v2_pilot"
 # design_file <- '~/code/clock2/2022-04-25-DesignFile.csv' # in Michael's clock2 repo
 design_file <- '/Volumes/Users/Andrew/2022-05-08-DesignFile.csv'
+#design_file <- '~/clock2/Design-2023-09-05.csv'
 design <- as.matrix(read_csv(design_file)) %>% 
   as_tibble() %>% select(-`...1`) %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("V"), names_to = "trial") %>%
   mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
                                                                                    vmax_location = timepoint[which.max(value)])
+design <- design %>% mutate(epoch = case_when(vmax > 74 ~ 'High Value', vmax <= 74 ~ 'Low Value'))
+design <- design %>% mutate(epoch_bin = as.factor(case_when(epoch=='High Value' & trial < 33 ~ 1,
+                                                  epoch=='High Value' & trial > 33 & trial < 74 ~ 2,
+                                                  epoch=='High Value' & trial > 74 & trial < 116 ~ 3,
+                                                  epoch=='High Value' & trial > 116 & trial < 161 ~ 4,
+                                                  epoch=='High Value' & trial > 161 & trial < 205 ~ 5,
+                                                  epoch=='High Value' & trial > 205 & trial < 250 ~ 6,
+                                                  epoch=='High Value' & trial > 250 & trial < 291 ~ 7,
+                                                  epoch=='High Value' & trial > 291 ~ 8,
+                                                  epoch=='Low Value' & trial < 74 ~ -1,
+                                                  epoch=='Low Value' & trial >= 74 & trial < 116 ~ -2,
+                                                  epoch=='Low Value' & trial >= 116 & trial < 161 ~ -3,
+                                                  epoch=='Low Value' & trial >=161 & trial < 205 ~ -4,
+                                                  epoch=='Low Value' & trial >=205 & trial < 250 ~ -5,
+                                                  epoch=='Low Value' & trial >=250 & trial < 291 ~ -6)))
+design <- design %>% group_by(epoch_bin) %>% mutate(vmax_loc_mean = mean(vmax_location), vmax_mean = mean(vmax)) %>% ungroup()
+design <- design %>% mutate(vmax_loc_lag1 = case_when(
+                                                      epoch_bin==2 ~ mean(design$vmax_loc_mean[design$epoch_bin==1],na.rm=TRUE),
+                                                      epoch_bin==3 ~ mean(design$vmax_loc_mean[design$epoch_bin==2],na.rm=TRUE),
+                                                      epoch_bin==4 ~ mean(design$vmax_loc_mean[design$epoch_bin==3],na.rm=TRUE),
+                                                      epoch_bin==5 ~ mean(design$vmax_loc_mean[design$epoch_bin==4],na.rm=TRUE),
+                                                      epoch_bin==6 ~ mean(design$vmax_loc_mean[design$epoch_bin==5],na.rm=TRUE),
+                                                      epoch_bin==7 ~ mean(design$vmax_loc_mean[design$epoch_bin==6],na.rm=TRUE))
+                            ,
+                            vmax_loc_lag2 = case_when(
+                              epoch_bin==3 ~ mean(design$vmax_loc_mean[design$epoch_bin==1],na.rm=TRUE),
+                              epoch_bin==4 ~ mean(design$vmax_loc_mean[design$epoch_bin==2],na.rm=TRUE),
+                              epoch_bin==5 ~ mean(design$vmax_loc_mean[design$epoch_bin==3],na.rm=TRUE),
+                              epoch_bin==6 ~ mean(design$vmax_loc_mean[design$epoch_bin==4],na.rm=TRUE),
+                              epoch_bin==7 ~ mean(design$vmax_loc_mean[design$epoch_bin==5],na.rm=TRUE)))
 # initial sanity checks on the disign file
 #str(design)
 #ggplot(design, aes(trial, vmax_location, color = vmax)) + geom_line() + scale_color_viridis_c()
@@ -85,7 +116,7 @@ df1 <- df1 %>%  mutate(u_present = case_when(!is.na(windPos_out) & local_uncerta
          omission = 0.7 >= rng,
          omission_lag = lag(omission),
          reward_lag = !omission_lag) %>% ungroup()
-
+  df1 <- df1 %>% arrange(subject,blocknum,meta_trialCount)
 # sanity checks on behavioral data: ensure we know where erasures/control stimuli were
 #ggplot(df1, aes(trial, u_present, color = as.factor(chooseUncertainty))) + geom_point() + facet_wrap(~subject)
 #pdf('test.pdf',height=18,width=16)
@@ -145,10 +176,10 @@ m2_3 <- lmerTest::lmer(pos_shifted ~ scale(vmax_location)*scale(vmax) + scale(at
 summary(m2_3)
 car::Anova(m2_3, '3')
 
-m5_1 <- lmerTest::lmer(pos_shifted ~ scale(vmax_location) + scale(vmax_location):scale(vmax) + 
-               scale(u_location):u_present + scale(u_location):u_present:scale(vmax) + scale(att_location):att_present + scale(att_location):att_present:scale(vmax) + 
-             resp_theta_c_lag*omission_lag + (1|subject), 
-           df1)
+m5_1 <- lmerTest::lmer(pos_shifted ~ scale(vmax_location):pre_clock_freeze + scale(vmax_location):scale(vmax):pre_clock_freeze + 
+               scale(u_location):u_present:pre_clock_freeze + pre_clock_freeze*scale(att_location):att_present + 
+             resp_theta_c_lag*omission_lag*pre_clock_freeze + (1|subject), 
+           df)
 summary(m5_1)
 car::Anova(m5_1, '3')
 
@@ -158,11 +189,12 @@ mlist <- list()
 for (i in 1:1000) {
   df$u_location[!df$u_present] <- runif(length(df$u_location[!df$u_present]), 0, 360)
   df$att_location[!df$att_present] <- runif(length(df$att_location[!df$att_present]), 0, 360)
-  mi <- lmer(pos_shifted ~ scale(vmax_location)*scale(vmax) + 
-               scale(u_location)*u_present*scale(vmax) + 
-               scale(att_location) * att_present*scale(vmax) +
-               resp_theta_c_lag * outcome_lag +
-               experiment +
+  mi <- lmer(pos_shifted ~ scale(vmax_location)*scale(vmax)*pre_clock_freeze + 
+               scale(u_location)*u_present*pre_clock_freeze + 
+               scale(att_location)*att_present*pre_clock_freeze +
+               resp_theta_c_lag * outcome_lag*pre_clock_freeze +
+               experiment*pre_clock_freeze*scale(vmax_location) +
+               vmax_loc_mean + vmax_loc_lag1 + vmax_loc_lag2 +
                (1|subject), 
              df)
   mdf <- broom.mixed::tidy(mi)
