@@ -41,14 +41,26 @@ design <- design %>% mutate(vmax_loc_lag1 = case_when(
                                                       epoch_bin==4 ~ mean(design$vmax_loc_mean[design$epoch_bin==3],na.rm=TRUE),
                                                       epoch_bin==5 ~ mean(design$vmax_loc_mean[design$epoch_bin==4],na.rm=TRUE),
                                                       epoch_bin==6 ~ mean(design$vmax_loc_mean[design$epoch_bin==5],na.rm=TRUE),
-                                                      epoch_bin==7 ~ mean(design$vmax_loc_mean[design$epoch_bin==6],na.rm=TRUE))
+                                                      epoch_bin==7 ~ mean(design$vmax_loc_mean[design$epoch_bin==6],na.rm=TRUE),
+                                                      epoch_bin==-1 ~ mean(design$vmax_loc_mean[design$epoch_bin==1],na.rm=TRUE),
+                                                      epoch_bin==-2 ~ mean(design$vmax_loc_mean[design$epoch_bin==2],na.rm=TRUE),
+                                                      epoch_bin==-3 ~ mean(design$vmax_loc_mean[design$epoch_bin==3],na.rm=TRUE),
+                                                      epoch_bin==-4 ~ mean(design$vmax_loc_mean[design$epoch_bin==4],na.rm=TRUE),
+                                                      epoch_bin==-5 ~ mean(design$vmax_loc_mean[design$epoch_bin==5],na.rm=TRUE),
+                                                      epoch_bin==-6 ~ mean(design$vmax_loc_mean[design$epoch_bin==6],na.rm=TRUE))
                             ,
                             vmax_loc_lag2 = case_when(
                               epoch_bin==3 ~ mean(design$vmax_loc_mean[design$epoch_bin==1],na.rm=TRUE),
                               epoch_bin==4 ~ mean(design$vmax_loc_mean[design$epoch_bin==2],na.rm=TRUE),
                               epoch_bin==5 ~ mean(design$vmax_loc_mean[design$epoch_bin==3],na.rm=TRUE),
                               epoch_bin==6 ~ mean(design$vmax_loc_mean[design$epoch_bin==4],na.rm=TRUE),
-                              epoch_bin==7 ~ mean(design$vmax_loc_mean[design$epoch_bin==5],na.rm=TRUE)))
+                              epoch_bin==7 ~ mean(design$vmax_loc_mean[design$epoch_bin==5],na.rm=TRUE),
+                              epoch_bin==-2 ~ mean(design$vmax_loc_mean[design$epoch_bin==1],na.rm=TRUE),
+                              epoch_bin==-3 ~ mean(design$vmax_loc_mean[design$epoch_bin==2],na.rm=TRUE),
+                              epoch_bin==-4 ~ mean(design$vmax_loc_mean[design$epoch_bin==3],na.rm=TRUE),
+                              epoch_bin==-5 ~ mean(design$vmax_loc_mean[design$epoch_bin==4],na.rm=TRUE),
+                              epoch_bin==-6 ~ mean(design$vmax_loc_mean[design$epoch_bin==5],na.rm=TRUE))
+)
 # initial sanity checks on the disign file
 #str(design)
 #ggplot(design, aes(trial, vmax_location, color = vmax)) + geom_line() + scale_color_viridis_c()
@@ -116,6 +128,8 @@ df1 <- df1 %>%  mutate(u_present = case_when(!is.na(windPos_out) & local_uncerta
          omission = 0.7 >= rng,
          omission_lag = lag(omission),
          reward_lag = !omission_lag) %>% ungroup()
+  df1$pre_clock_freeze = df1$list.preClockFreeze.currentvalue
+  
   df1 <- df1 %>% arrange(subject,blocknum,meta_trialCount)
 # sanity checks on behavioral data: ensure we know where erasures/control stimuli were
 #ggplot(df1, aes(trial, u_present, color = as.factor(chooseUncertainty))) + geom_point() + facet_wrap(~subject)
@@ -189,12 +203,11 @@ mlist <- list()
 for (i in 1:1000) {
   df$u_location[!df$u_present] <- runif(length(df$u_location[!df$u_present]), 0, 360)
   df$att_location[!df$att_present] <- runif(length(df$att_location[!df$att_present]), 0, 360)
-  mi <- lmer(pos_shifted ~ scale(vmax_location)*scale(vmax)*pre_clock_freeze + 
-               scale(u_location)*u_present*pre_clock_freeze + 
-               scale(att_location)*att_present*pre_clock_freeze +
-               resp_theta_c_lag * outcome_lag*pre_clock_freeze +
-               experiment*pre_clock_freeze*scale(vmax_location) +
-               vmax_loc_mean + vmax_loc_lag1 + vmax_loc_lag2 +
+  mi <- lmer(pos_shifted ~ scale(vmax_location):epoch + 
+               scale(u_location)*u_present + 
+               scale(att_location)*att_present +
+               resp_theta_c_lag*outcome_lag:epoch + outcome_lag +
+               vmax_loc_lag1:epoch + vmax_loc_lag2:epoch +
                (1|subject), 
              df)
   mdf <- broom.mixed::tidy(mi)
