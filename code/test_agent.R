@@ -4,15 +4,15 @@ source("code/clock2_troll_world.R")
 source("code/scepticc.R")
 library(tidyverse)
 ncenters <- 9 # how many gaussians there are
-mean_val <- 10 # mean reward rate
+mean_val <- 15 # mean reward rate
 sd_val <- 2 # standard deviation of reward / range of rewards
 centers <- sample(seq(0, 360, by = 10), ncenters, replace = FALSE) # line up gaussians here
 values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
-width_sd <- 15 # fixed, how wide are the underlying Gaussians
+width_sd <- 5 # fixed, how wide are the underlying Gaussians
 
-bump_prominence <- 10 # bump will always be higher, but it will change
+bump_prominence <- 6 # bump will always be higher, but it will change
 bump_value <- mean_val * bump_prominence
-bump_center <- sample(seq(0, 360, by = 10), 1, replace = FALSE)
+bump_center <- sample(seq(0, 360, by = 40), 1, replace = FALSE)
 
 # VM version
 # contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights=c(values, bump_value), widths = rep(width_sd, ncenters+1))
@@ -34,7 +34,7 @@ contingency$get_centers()
 contingency$get_weights()
 
 
-tt <- troll_world$new(n_trials=364, values=contingency$get_wfunc(), drift_sd=5) # set up troll world
+tt <- troll_world$new(n_trials=345, values=contingency$get_wfunc(), drift_sd=5) # set up troll world
 tt$apply_flex(high_avg = 1, high_spread = 0)
 plot(tt$spread) # prominence of bump vs floor over trials, shows switches, bump drifts in Gaussian random walk
 plot(tt$get_starting_values())
@@ -47,11 +47,16 @@ aa[1:5, 1:10]
 tt$reset_counter()
 tt$get_next_values()[1:10]
 
-for (ii in 1:nrow(aa)) {
-  plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii]), ylim = range(aa))
-  Sys.sleep(.1)
-}
+# for (ii in 1:nrow(aa)) {
+#   plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii]), ylim = range(aa))
+#   Sys.sleep(.1)
+# }
+values <- data.frame(t(tt$get_values_matrix()))
 
+values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial") %>%
+  mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
+                                                                           vmax_location = timepoint[which.max(value)])
+plot(values$vmax_location)
 # in progress
 #tt$erase_segment(30, trial=10)
 
