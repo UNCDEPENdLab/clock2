@@ -51,7 +51,12 @@ tt$get_next_values()[1:10]
 #   plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii]), ylim = range(aa))
 #   Sys.sleep(.1)
 # }
-values <- data.frame(t(tt$get_values_matrix()))
+
+
+inq_val <- round(t(tt$get_values_matrix()),0)
+write.csv(inq_val,file = '2023-09-12-Design-File-asMatrix.csv')
+
+values <- data.frame(round(t(tt$get_values_matrix())),0)
 
 values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial") %>%
   mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
