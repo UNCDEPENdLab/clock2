@@ -8,7 +8,7 @@ mean_val <- 15 # mean reward rate
 sd_val <- 2 # standard deviation of reward / range of rewards
 centers <- sample(seq(0, 360, by = 10), ncenters, replace = FALSE) # line up gaussians here
 values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
-width_sd <- 5 # fixed, how wide are the underlying Gaussians
+width_sd <- 20 # fixed, how wide are the underlying Gaussians
 
 bump_prominence <- 6 # bump will always be higher, but it will change
 bump_value <- mean_val * bump_prominence
