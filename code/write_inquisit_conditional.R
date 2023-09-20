@@ -9,11 +9,11 @@ iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=1)) # import csv as data fram
   df0 <- NULL
   for (iT in 1:nT-1){
     if (iT==1){
-      df0 <- paste0('if (values.rt_shifted > ',df_t$t[iT], ' && values.rt_shifted <= ', df_t$t[iT+1],') {','\n','values.mag = ','list.rt_',as.character(df_t$ix[iT]),'.currentvalue','; \n')
+      df0 <- paste0('if (values.rt_shifted > ',df_t$t[iT], ' && values.rt_shifted <= ', df_t$t[iT+1],') {','\n','values.mag = ','list.rt_',as.character(df_t$ix[iT]),'.nextvalue','; \n')
     } else if (iT>1 & iT<nT-2){
-      df0 <- paste0(df0,'} else if (values.rt_shifted > ',df_t$t[iT], ' && values.rt_shifted <= ',df_t$t[iT+1],') { \n','values.mag = ','list.rt_',as.character(df_t$ix[iT]),'.currentvalue','; \n')
+      df0 <- paste0(df0,'} else if (values.rt_shifted > ',df_t$t[iT], ' && values.rt_shifted <= ',df_t$t[iT+1],') { \n','values.mag = ','list.rt_',as.character(df_t$ix[iT]),'.nextvalue','; \n')
     } else if (iT == nT-1){
-      df0 <- paste0(df0,'} else if (values.rt_shifted > ',df_t$t[iT], ' && values.rt_shifted <= ',df_t$t[iT+1],') { \n','values.mag = ','list.rt_',as.character(df_t$ix[iT]),'.currentvalue','; \n',' }')
+      df0 <- paste0(df0,'} else if (values.rt_shifted > ',df_t$t[iT], ' && values.rt_shifted <= ',df_t$t[iT+1],') { \n','values.mag = ','list.rt_',as.character(df_t$ix[iT]),'.nextvalue','; \n',' }')
     }
   }
   iqx_formatted_df[1,1] <- df0 

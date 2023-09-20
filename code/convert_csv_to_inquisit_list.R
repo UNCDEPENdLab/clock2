@@ -27,7 +27,7 @@ convert_csv_to_inquisit_list <- function(csv_file = '', row_prefix ='rt_'){
       } else if(iC>2 & iC < nC){
         df0 <- paste0(df0,', ',df[iR,iC])
       }else if (iC==nC){
-        df0 <- paste0(df0,',',df[iR,iC],')','\n','/ poolsize = 300 \n / selectionmode=sequence','\n','</list>')
+        df0 <- paste0(df0,',',df[iR,iC],')','\n','/ selectionrate = trial \n/ selectionmode=values.index;','\n','</list>')
       }
     }
     iqx_formatted_df[iR,1] <- df0 
