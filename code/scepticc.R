@@ -84,6 +84,7 @@ scepticc <- R6::R6Class(
       private$pvt_bf_set$get_weights()
     },
     update_weights = function(tau, sd=NULL, outcome, model="decay") {
+      #cat("alpha: ", self$alpha, ", gamma: ", self$gamma, ", beta: ", self$beta, "\n")
       checkmate::assert_number(tau)
       private$pvt_eligibility$center <- tau
       e <- private$pvt_bf_set$get_eligibilities(private$pvt_eligibility)
@@ -133,24 +134,71 @@ scepticc <- R6::R6Class(
     },
     emit_choice = function() {
       # sample choice based on softmax probabilities
-      sample(1:private$pvt_n_points, 1, prob = self$get_choice_probs())
+      # print(private$pvt_bf_set$get_wfunc())
+      # lookup choice against positions in radians
+      s <- sample(seq_len(private$pvt_n_points), 1, prob = self$get_choice_probs())
+      return(private$pvt_eligibility$get_pvec()[s])
     },
-    run_contingency = function() {
+    run_contingency = function(pvec=NULL, optimize=FALSE) {
       if (is.null(private$pvt_contingency)) {
         stop("Cannot run contingency if it does not exist")
       }
+      
+      if (!is.null(pvec)) {
+        private$pvt_alpha <- pvec["alpha"]
+        private$pvt_beta <- pvec["beta"]
+        private$pvt_gamma <- pvec["gamma"]
+      }
 
       n_trials <- private$pvt_contingency$get_n_trials()
-      history <- data.frame(trial=1:n_trials, choice=rep(NA, n_trials), outcome=rep(NA, n_trials))
+      
       private$pvt_contingency$reset_counter()
+      private$pvt_bf_set$reset_weights() # set back to 0
       self$reset_history()
       set.seed(private$pvt_seed)
-      for (i in seq_len(n_trials)) {
-        history$choice[i] <- choice <- self$emit_choice()
-        history$outcome[i] <- private$pvt_contingency$harvest(choice)
-        self$update_weights(choice, outcome=history$outcome[i], model="decay")
+      
+      if (!optimize) {
+        history <- data.frame(trial=1:n_trials, choice=rep(NA, n_trials), outcome=rep(NA, n_trials))
+        for (i in seq_len(n_trials)) {
+          history$choice[i] <- choice <- self$emit_choice()
+          history$outcome[i] <- private$pvt_contingency$harvest(choice)
+          self$update_weights(choice, outcome=history$outcome[i], model="decay")
+        }
+        return(history)
+      } else {
+        ovec <- rep(NA, n_trials)
+        for (i in seq_len(n_trials)) {
+          choice <- self$emit_choice()
+          ovec[i] <- private$pvt_contingency$harvest(choice)
+          self$update_weights(choice, outcome=ovec[i], model="decay")
+          #cat("c: ", choice, "\n")
+        }
+        #print(pvec)
+        #cat("o: ", sum(ovec), "\n")
+        return(-sum(ovec))
       }
-      return(history)
+    },
+    optimize_returns = function() {
+      pvec <- c(alpha = self$alpha, gamma = self$gamma, beta = self$beta)
+      lb <- c(0.001, 0, 0.05) %>% setNames(c("alpha", "gamma", "beta"))
+      ub <- c(0.999, 0.95, 20) %>% setNames(c("alpha", "gamma", "beta"))
+      parscale <- c(.1, .1, 1) %>% setNames(c("alpha", "gamma", "beta"))#rough step sizes for parameters
+      browser()
+      # optResult <- nlminb(start=pvec, objective=self$run_contingency, optimize=TRUE,
+      #                     lower=lb, upper=ub, control=list(eval.max=500, iter.max=500, step.min=0.1))
+      
+      
+      avals <- seq(0.01, 0.95, by=0.001)
+      rets <- sapply(avals, function(a) {
+        self$alpha <- a
+        self$run_contingency(optimize=TRUE)
+      })
+      
+      optResult <- optim(par=pvec, fn=self$run_contingency, optimize=TRUE, method="L-BFGS-B", lower=lb, upper=ub,
+                         control=list(parscale=c(.1, .1, 1), maxit=1e4))
+      
+      
+      #scale=1/parscale, 
     }
 
   )

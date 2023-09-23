@@ -241,6 +241,10 @@ rbf_set <- R6::R6Class(
     get_centers = function() {
       sapply(self$elements, function(x) x$center)
     },
+    reset_weights = function() {
+      sapply(seq_along(self$elements), function(ii) self$elements[[ii]]$weight <- 0)
+      return(self)
+    },
     set_weights = function(v) {
       checkmate::assert_numeric(v, len=length(self$elements))
       sapply(seq_along(self$elements), function(ii) self$elements[[ii]]$weight <- v[ii])

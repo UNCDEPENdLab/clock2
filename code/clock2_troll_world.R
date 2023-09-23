@@ -1,6 +1,7 @@
 troll_world <- R6::R6Class(
   "troll_world",
   private = list(
+    pvt_pvec = NULL, # position of values around circle in units of measurement (radians)
     shift_vec = function(x, delta) {
       ## converts x[n] into x[n-1] by multiplying the Fourier
       ## transform on x[n] by z^-1 i.e. by e^-iw
@@ -54,7 +55,7 @@ troll_world <- R6::R6Class(
       private$pvt_clean <- TRUE
     },
     pvt_n_trials = 100,
-    pvt_n_timesteps = 360,
+    pvt_n_timesteps = 200,
     pvt_drift_sd = 0,
     pvt_drift_vec = NULL,
     pvt_drift_tvals = NULL, # drift only
@@ -79,8 +80,8 @@ troll_world <- R6::R6Class(
   public = list(
     erased_segments = list(),
     cur_trial = 1,
-    units="degrees",
-    tvals=matrix(0, nrow=100, ncol=360),
+    units="radians",
+    tvals=matrix(0, nrow=100, ncol=200),
     spread = NULL, # tracks the point spread between min and max (entropy flexing)
     epoch = NULL, # tracks what phase we are in of the entropy manipulation
     p_reward = 0.7, # current fixed probability for reward
@@ -102,7 +103,19 @@ troll_world <- R6::R6Class(
         }
       }
 
-      private$pvt_n_timesteps <- ncol(values)
+      private$pvt_n_timesteps <- ncol(self$tvals)
+      
+      if (self$units == "radians") {
+        max_val <- 2*pi
+      } else if (self$units == "degrees") {
+        max_val <- 360
+      } else { stop("wrong units") }
+      
+      # setup positions
+      d_theta <- max_val/private$pvt_n_timesteps
+      
+      # since circle wraps, we want to avoid adding a redundant basis function at 0 vs. at 2*pi
+      private$pvt_pvec <- seq(0, max_val - d_theta, by=d_theta)
 
       if (!is.null(drift_sd)) {
         checkmate::assert_integerish(drift_sd, lower=0, len=1L)
@@ -253,7 +266,9 @@ troll_world <- R6::R6Class(
     harvest = function(choice) {
       v <- self$get_next_values()
       p <- runif(1)
-      ifelse(p < self$p_reward, v[choice], 0)
+      # computationally expensive location of the closest matching position
+      pos <- which.min(abs(choice - private$pvt_pvec))
+      ifelse(p < self$p_reward, v[pos], 0)
     }
   )
 )
