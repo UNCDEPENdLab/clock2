@@ -34,9 +34,17 @@ contingency$get_centers()
 contingency$get_weights()
 
 
+
+# used in prolific
 tt <- troll_world$new(n_trials=345, values=contingency$get_wfunc(), drift_sd=5) # set up troll world
 tt$apply_flex(high_avg = 1, high_spread = 0)
 plot(tt$spread) # prominence of bump vs floor over trials, shows switches, bump drifts in Gaussian random walk
+
+# stable 100-trial contingency for model validation
+tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0)
+tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 100, jump_high = FALSE)
+plot(tt$spread)
+
 plot(tt$get_starting_values())
 # aa <- tt$get_values_matrix("original", quiet=F) # original values (should be constant over trials)
 # aa <- tt$get_values_matrix("drift", quiet=F) # drift alone
@@ -78,16 +86,168 @@ plot(values$vmax_location)
 #tt$erase_segment()
 
 
+## completely static contingency
+tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0)
+#plot(tt$spread)
+plot(tt$get_starting_values())
+tt$reset_counter()
+# aa <- tt$get_values_matrix("original", quiet=F) # original values (should be constant over trials)
+# aa <- tt$get_values_matrix("drift", quiet=F) # drift alone
+# aa <- tt$get_values_matrix("flex", quiet=F) # flex alone
+aa <- tt$get_values_matrix("objective", quiet=F) # all manipulations
+
+# aa[1:5, 1:10]
+# tt$reset_counter()
+# tt$get_next_values()[1:10]
+
+
 ## try out sceptic agent
-sceptic_agent <- scepticc$new(n_basis=12, n_points=50, contingency=tt)
-# sceptic_agent$update_weights(tau=pi/2, outcome=100)
+sceptic_agent <- scepticc$new(n_basis=12, n_points=200, contingency=tt)
+#sceptic_agent$update_weights(tau=pi/2, outcome=100)
 # sceptic_agent$emit_choice()
-# sceptic_agent$get_choice_probs()
-sceptic_agent$get_weights()
-learning_history <- sceptic_agent$run_contingency()
+#plot(sceptic_agent$get_choice_probs(), type="l")
+#sceptic_agent$get_weights()
+
+sceptic_agent$beta <- 10
+obj_f <- data.frame(choice = seq(0, 2*pi, length.out=200), value = tt$get_starting_values())
 
 
-system.time(aa <- replicate(100, sceptic_agent$run_contingency()))
+learning_history <- sceptic_agent$run_contingency(optimize = FALSE)
+
+ggplot(obj_f, aes(x=choice, y=value)) + geom_line() +
+  geom_point(data = learning_history, mapping=aes(x=choice, y=outcome, color=trial))
+
+ggplot(learning_history, aes(x=trial, y=outcome, color=choice)) + geom_point() +
+  stat_smooth()
+
+
+## prototype cubic spline erasure
+l <- seq(0, 2*pi, length.out=360)
+v <- tt$tvals[1,]
+
+
+dd <- rep(NA, 10000)
+dp <- rep(NA, 10000)
+for(ii in 1:10000) {
+  vnew <- erase(v, l)
+  dd[ii] <- attr(vnew, "delta")
+  #dp[ii] <- attr(vnew, "delta_pct")
+  dp[ii] <- attr(vnew, "pct_orig")
+  #plot(vnew, type="l", main=attr(vnew, "ecent"))
+  #Sys.sleep(.5)
+}
+
+for(ii in 1:30) {
+  vnew <- erase(v, l)
+  #dd[ii] <- attr(vnew, "delta")
+  #dp[ii] <- attr(vnew, "delta_pct")
+  #dp[ii] <- attr(vnew, "pct_orig")
+  plot(vnew, type="l", main=attr(vnew, "ecent"))
+  Sys.sleep(.5)
+}
+
+
+median(dd)
+mean(dd)
+sd(dd)
+hist(dd)
+hist(dp)
+summary(dp)
+table(dp > 0)
+
+# pi/6 = 30 degrees
+# erase <- function(v, loc, width = pi/6, pos = 0.5, pos_sd = 0, v_quantiles = c(.05, .95)) {
+#   checkmate::assert_number(pos, lower=0, upper=1)
+#   stopifnot(length(v) == length(loc))
+#   v_new <- v
+#   
+#   # left-most point of erased segment
+#   low_pos <- sample(seq_along(v), 1) # vector index
+#   low_rad <- loc[low_pos] # location of start point in radians based on location
+#   high_rad <- (low_rad + width) %% (2*pi) # wrap back onto circle
+#   high_pos <- which.min(abs(loc - high_rad))
+#   
+#   # point within the segment where we park the resampled value
+#   pos_q <- truncnorm::rtruncnorm(1, a = 0, b = 1, mean = pos, sd = pos_sd)
+#   
+#   # quantile of position within erased vector
+#   mid_pos <- round(quantile(low_pos:high_pos, pos_q))
+#   
+#   
+#   #mid_rad <- loc[mid_pos]
+#   #low_rad <- mid_rad - width/2
+#   #high_rad <- mid_rad + width/2
+#   #low_pos <- which.min(abs(loc - low_rad))
+#   
+#   v_new[low_pos:high_pos] <- NA
+#   
+#   v_low <- quantile(v, v_quantiles[1])
+#   v_high <- quantile(v, v_quantiles[2])
+#   v_elig <- v[v > v_low & v < v_high]
+#   v_point <- sample(v_elig, 1) # sample only from eligible quantiles
+#   # place this value sample/point at the mid-point location for interpolation
+#   v_new[mid_pos] <- v_point
+#   
+#   # drop in cubic spline
+#   v_new <- zoo::na.spline(v_new)
+#   attr(v_new, "ecent") <- mid_pos
+#   return(v_new)
+# }
+
+
+erase <- function(v, loc, width = pi/6, v_quantiles = c(.25, .75), r_quantiles = c(.25, .75)) {
+  checkmate::assert_number(pos, lower=0, upper=1)
+  stopifnot(length(v) == length(loc))
+  v_new <- v
+  
+  # which values are eligible for erasure?
+  qs <- quantile(v, r_quantiles)
+  pp <- which(v >= qs[1] & v <= qs[2])
+
+  # mid-point of erased segment
+  mid_pos <- sample(pp, 1) # vector index
+  mid_rad <- loc[mid_pos]
+  low_rad <- (mid_rad - width/2) %% (2*pi) # location of start point in radians based on location
+  high_rad <- (mid_rad + width/2) %% (2*pi) # wrap back onto circle
+  low_pos <- which.min(abs(loc - low_rad))
+  high_pos <- which.min(abs(loc - high_rad))
+  
+  v_new[low_pos:high_pos] <- NA
+  
+  v_low <- quantile(v, v_quantiles[1])
+  v_high <- quantile(v, v_quantiles[2])
+  v_elig <- v[v > v_low & v < v_high]
+  v_point <- sample(v_elig, 1) # sample only from eligible quantiles
+  # place this value sample/point at the mid-point location for interpolation
+  v_new[mid_pos] <- v_point
+  #print(v_point)
+  
+  #if (v_point > 200) browser()
+  
+  # drop in cubic spline
+  v_new <- zoo::na.spline(v_new)
+  attr(v_new, "ecent") <- mid_pos
+  attr(v_new, "delta") <- v[mid_pos] - v_point
+  #attr(v_new, "delta_pct") <- ((v[mid_pos] - v_point)/v[mid_pos]) * 100
+  attr(v_new, "pct_orig") <- (v_point/v[mid_pos]) * 100
+  return(v_new)
+}
+
+
+library(ggplot2)
+ggplot(learning_history, aes(x=trial, y=outcome))
+
+test <- sceptic_agent$optimize_returns()
+
+
+#system.time(aa <- replicate(100, sceptic_agent$run_contingency()))
+
+hx <- sceptic_agent$get_func_history()
+for (ii in 1:nrow(hx)) {
+  plot(hx[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii]), ylim = range(aa))
+  Sys.sleep(.1)
+}
+
 
 # returns history of basis weights
 #h <- reshape2::melt(sceptic_agent$get_weight_history(), varnames=c("trial", "basis"))
