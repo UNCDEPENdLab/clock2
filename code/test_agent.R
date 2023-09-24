@@ -212,19 +212,18 @@ erase <- function(v, loc, width = pi/6, v_quantiles = c(.25, .75), r_quantiles =
   low_pos <- which.min(abs(loc - low_rad))
   high_pos <- which.min(abs(loc - high_rad))
   
+  # erase segment with NAs
   v_new[low_pos:high_pos] <- NA
   
+  # find the value for the midpoint of the erasure based on the eligible quantiles
   v_low <- quantile(v, v_quantiles[1])
   v_high <- quantile(v, v_quantiles[2])
   v_elig <- v[v > v_low & v < v_high]
   v_point <- sample(v_elig, 1) # sample only from eligible quantiles
   # place this value sample/point at the mid-point location for interpolation
   v_new[mid_pos] <- v_point
-  #print(v_point)
   
-  #if (v_point > 200) browser()
-  
-  # drop in cubic spline
+  # use cubic spline interpolation to connect the dots
   v_new <- zoo::na.spline(v_new)
   attr(v_new, "ecent") <- mid_pos
   attr(v_new, "delta") <- v[mid_pos] - v_point
