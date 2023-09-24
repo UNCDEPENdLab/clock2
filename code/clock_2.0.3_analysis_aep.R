@@ -13,8 +13,9 @@ if (sum(str_detect(Sys.info(), "Alex"))>1) { base_dir <- "~/Library/CloudStorage
   base_dir <- '~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner' }# on skinner}
 output_dir <- "~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/skinner/data/prolific/clock_v2_pilot"
 # design_file <- '~/code/clock2/2022-04-25-DesignFile.csv' # in Michael's clock2 repo
-design_file <- '/Volumes/Users/Andrew/2022-05-08-DesignFile.csv'
-#design_file <- '~/clock2/Design-2023-09-05.csv'
+# design_file <- '/Volumes/Users/Andrew/2022-05-08-DesignFile.csv'
+
+design_file <- '~/code/clock2/2022-05-08-DesignFile.csv'
 design <- as.matrix(read_csv(design_file)) %>% 
   as_tibble() %>% select(-`...1`) %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("V"), names_to = "trial") %>%
   mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
@@ -68,19 +69,19 @@ design <- design %>% mutate(vmax_loc_lag1 = case_when(
 #median_vmax = median(design$vmax)
 
 # combine behavioral data from two batches of 25 Prolific subjects
-df1_m <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2_pilot/pilot_v3_03_07-31-23/raw/papalea_prosper_eeg_clock_v2_0_3_raw_2308031715.csv')
-df2_m <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2_pilot/pilot_v3_03_07-28-23/raw/papalea_prosper_eeg_clock_v2_0_3_raw_2307282152.csv')
-df3_m <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2_pilot/pilot_v3_03_07-03-23/raw/papalea_prosper_eeg_clock_v2_0_3_raw_2307031911.csv')
+df1_m <- read_csv('~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/skinner/data/prolific/clock_v2_pilot/pilot_v3_03_07-31-23/raw/papalea_prosper_eeg_clock_v2_0_3_raw_2308031715.csv')
+df2_m <- read_csv('~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/skinner/data/prolific/clock_v2_pilot/pilot_v3_03_07-28-23/raw/papalea_prosper_eeg_clock_v2_0_3_raw_2307282152.csv')
+df3_m <- read_csv('~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/skinner/data/prolific/clock_v2_pilot/pilot_v3_03_07-03-23/raw/papalea_prosper_eeg_clock_v2_0_3_raw_2307031911.csv')
 df1_m <- df1_m %>% select(!date)
 df2_m <- df2_m %>% select(!date)
 df3_m <- df3_m %>% select(!date)
 dfm <- rbind(df1_m,df2_m,df3_m) %>% filter(trialcode=='dispFeedback_noU' | trialcode=='dispFeedback_U') # the score is calculated here, the variable of interest is rt_shifted
 dfm <- dfm %>% mutate(experiment ='mushrooms')
-df1_t <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2_pilot/pilot_v3_Trolls_08-10-23/raw/papalea_prosper_eeg_clock_v2_0_3_trolls_raw_2308150248.csv')
-df2_t <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2_pilot/pilot_v3_Trolls_08-10-23/raw/papalea_prosper_eeg_clock_v2_0_3_trolls_raw_2308151454.csv')
-df3_t <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2_pilot/pilot_v3_Trolls_08-10-23/raw/papalea_prosper_eeg_clock_v2_0_3_trolls_raw_2308132214.csv')
-df4_t <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2_pilot/pilot_v3_Trolls_08-10-23/raw/papalea_prosper_eeg_clock_v2_0_3_trolls_raw_2308132213.csv')
-df5_t <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2_pilot/pilot_v3_Trolls_08-10-23/raw/papalea_prosper_eeg_clock_v2_0_3_trolls_raw_2308132210.csv')
+df1_t <- read_csv('~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/skinner/data/prolific/clock_v2_pilot/pilot_v3_Trolls_08-10-23/raw/papalea_prosper_eeg_clock_v2_0_3_trolls_raw_2308150248.csv')
+df2_t <- read_csv('~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/skinner/data/prolific/clock_v2_pilot/pilot_v3_Trolls_08-10-23/raw/papalea_prosper_eeg_clock_v2_0_3_trolls_raw_2308151454.csv')
+df3_t <- read_csv('~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/skinner/data/prolific/clock_v2_pilot/pilot_v3_Trolls_08-10-23/raw/papalea_prosper_eeg_clock_v2_0_3_trolls_raw_2308132214.csv')
+df4_t <- read_csv('~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/skinner/data/prolific/clock_v2_pilot/pilot_v3_Trolls_08-10-23/raw/papalea_prosper_eeg_clock_v2_0_3_trolls_raw_2308132213.csv')
+df5_t <- read_csv('~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/skinner/data/prolific/clock_v2_pilot/pilot_v3_Trolls_08-10-23/raw/papalea_prosper_eeg_clock_v2_0_3_trolls_raw_2308132210.csv')
 df1_t <- df1_t %>% select(!date)
 df2_t <- df2_t %>% select(!date)
 df3_t <- df3_t %>% select(!date)
@@ -123,7 +124,7 @@ df1 <- df1 %>%  mutate(u_present = case_when(!is.na(windPos_out) & local_uncerta
          att_theta_c = att_theta - pi) %>% group_by(subject) %>% arrange(trial_to_merge) %>%
   mutate(resp_theta_c_lag = lag(resp_theta_c),
          vmax_theta_c_lag = lag(vmax_theta_c),
-         vmax_loc_scaled = scale(vmax_location),
+         vmax_loc_scaled = as.vector(scale(vmax_location)),
          outcome_lag = lag(Earnings),
          omission = 0.7 >= rng,
          omission_lag = lag(omission),
@@ -157,10 +158,13 @@ df2 <- df2 %>% arrange(subject)
 df2 <- transform(df2, id=match(subject, unique(subject)))
 df2$id <- as.numeric(df2$id)
 df2$pos_shifted <- df2$pos_shifted * pi/180
-library(bpnreg)
-m5 <- bpnreg::bpnme(pred.I = pos_shifted ~ vmax_loc_scaled*vmax_scaled*experiment + u_loc_scaled*u_present*vmax_scaled + att_loc_scaled*att_present*vmax_scaled + resp_theta_c_lag*omission_lag + (1|id), data = df2, its = 2000, burn = 100, n.lag=3, seed=121)
-
-
+# library(bpnreg)
+# m5 <- bpnreg::bpnme(pred.I = pos_shifted ~ vmax_loc_scaled*vmax_scaled*experiment + u_loc_scaled*u_present*vmax_scaled + att_loc_scaled*att_present*vmax_scaled + resp_theta_c_lag*omission_lag + (1|id), data = df2, its = 2000, burn = 100, n.lag=3, seed=121)
+df1 <- df1 %>% select(subject, experiment, Earnings, outcome_lag, trial, 
+                      u_present, u_location, att_location, att_present, pos_shifted,
+                      vmax_theta, vmax_location, ev)
+setwd("~/code/clock2/data")
+write_csv2(df1, file = "trolls_mushrooms_n202_Jul2023.csv")
 # initial Gaussian glms: good for manipulation checks
 # only the value bump
 m1 <- lmer(pos_shifted ~ scale(vmax_location)*scale(vmax) + experiment + (1|subject), df1 )

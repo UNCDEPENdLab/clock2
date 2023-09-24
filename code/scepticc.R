@@ -42,7 +42,7 @@ scepticc <- R6::R6Class(
   ),
   public = list(
     initialize = function(n_basis = 12, n_points = NULL, basis_sd = 0.3, weights_0 = 0, elig_sd = 0.3, 
-                          alpha=NULL, gamma=NULL, beta=NULL, contingency=NULL, seed=NULL) {
+                          alpha=NULL, gamma=NULL, beta=NULL, contingency=NULL, data = NULL, seed=NULL) {
       checkmate::assert_number(n_basis, lower=2)
       if (checkmate::test_number(weights_0)) weights_0 <- rep(weights_0, n_basis)
       if (checkmate::test_number(basis_sd)) basis_sd <- rep(basis_sd, n_basis)
@@ -69,11 +69,18 @@ scepticc <- R6::R6Class(
       if (!is.null(alpha)) self$alpha <- alpha
       if (!is.null(beta)) self$beta <- beta
       if (!is.null(gamma)) self$gamma <- gamma
-
+      
+      checkmate::assert_false(!is.null(contingency) & !is.null(data))
       if (!is.null(contingency)) {
         checkmate::assert_class(contingency, classes = "troll_world")
         private$pvt_contingency <- contingency # assign by reference -- will update original object
       }
+      
+      if (!is.null(data)) {
+        checkmate::assert_class(data, classes = "data.frame")
+        private$pvt_data <- data # assign by reference -- will update original object
+      }
+      
 
       if (!is.null(seed)) {
         checkmate::assert_integerish(seed, lower = 1, len = 1L)
@@ -152,6 +159,27 @@ scepticc <- R6::R6Class(
       }
       return(history)
     }
+    # run_data
+    run_data = function() {
+      if (is.null(private$pvt_data)) {
+        stop("Need data to run")
+      }
+      n_trials <- length(unique(private$pvt_data$trial))
+      history <- private$pvt_data %>% mutate(
+        choice <- pos_shifted*pi/180,
+        u_location <- u_location*pi/180,
+      )
+      # private$pvt_contingency$reset_counter()
+      self$reset_history()
+      # set.seed(private$pvt_seed)
+      for (i in seq_len(n_trials)) {
+        history$choice[i] <- choice <- private$pvt_data$pos_shifted[i]*pi/180
+        history$outcome[i] <- private$pvt_data$Earnings[i]
+        self$update_weights(choice, outcome=history$outcome[i], model="decay")
+      }
+      return(history)
+    }
+    
 
   )
 )
