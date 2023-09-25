@@ -1,4 +1,4 @@
-if (values.rt_shifted > 0 && values.rt_shifted <= 14) {
+if (values.rt_shifted >= 0 && values.rt_shifted <= 14) {
 values.mag = list.rt_0.nextvalue; 
 } else if (values.rt_shifted > 14 && values.rt_shifted <= 28) { 
 values.mag = list.rt_1.nextvalue; 
@@ -714,6 +714,8 @@ values.mag = list.rt_355.nextvalue;
 values.mag = list.rt_356.nextvalue; 
 } else if (values.rt_shifted > 4958 && values.rt_shifted <= 4972) { 
 values.mag = list.rt_357.nextvalue; 
+} else if (values.rt_shifted > 4972 && values.rt_shifted <= 4986) { 
+values.mag = list.rt_358.nextvalue; 
 } else if (values.rt_shifted > 4986 && values.rt_shifted <= 5000) { 
 values.mag = list.rt_359.nextvalue; 
  }

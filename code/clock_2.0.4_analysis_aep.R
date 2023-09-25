@@ -72,7 +72,7 @@ ggplot(design, aes(trial, vmax)) + geom_line() + scale_color_viridis_c()
 #median_vmax = median(design$vmax)
 
 # combine behavioral data from two batches of 25 Prolific subjects
-df1 <- read_csv('/Users/andypapale/Downloads/papalea_prosper_eeg_clock_v2_0_4_raw_2309182305.csv') %>%
+df1 <- read_csv('/Users/andypapale/Downloads/clock_raw_data_all_9-24.csv') %>%
   filter(trialcode=='dispFeedback_noU' | trialcode=='dispFeedback_U') # the score is calculated here, the variable of interest is rt_shifted
 df1 <- df1 %>%  mutate(u_present = case_when(!is.na(windPos_out) & local_uncertainty == "wind" ~ TRUE,
                                             !is.na(fogPos_out) & local_uncertainty == "cloud" ~ TRUE,
