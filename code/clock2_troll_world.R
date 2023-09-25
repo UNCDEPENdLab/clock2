@@ -79,6 +79,7 @@ troll_world <- R6::R6Class(
   ),
   public = list(
     erased_segments = list(),
+    attention_segments = list(),
     cur_trial = 1,
     units="radians",
     tvals=matrix(0, nrow=100, ncol=200),
@@ -87,7 +88,7 @@ troll_world <- R6::R6Class(
     p_reward = 0.7, # current fixed probability for reward
 
     #' @param values A vector of values for every timestep, or a trials x timesteps matrix
-    initialize = function(n_trials = NULL, values = NULL, drift_sd = NULL) {
+    initialize = function(n_trials = NULL, values = NULL, drift_sd = NULL, erase_prop = 1/3, attention_prop = 1/3) {
       if (!is.null(n_trials)) {
         checkmate::assert_integerish(n_trials, lower=1, len=1L)
         private$pvt_n_trials <- n_trials
@@ -122,25 +123,49 @@ troll_world <- R6::R6Class(
         self$drift_sd <- drift_sd
       }
     },
-
-    erase_segment = function(size_deg = 30, trial = 1) {
-      pos_start <- sample(1:360, size=1)
-      pos_end <- pos_start + size_deg - 1
-      pos_vec <- pos_start:pos_end
-
-      pos_vec <- sapply(pos_vec, function(x) {
-        if (x > 360) x = x - 360
-        else x
-      })
-
-      browser()
-
-      # tmp fill
+    
+    erase_segment = function(v, loc, width = pi/6, v_quantiles = c(.25, .75), r_quantiles = c(.25, .75)) {
+      checkmate::assert_number(pos, lower=0, upper=1)
+      stopifnot(length(v) == length(loc))
+      v_new <- v
+      
+      # which values are eligible for erasure?
+      qs <- quantile(v, r_quantiles)
+      pp <- which(v >= qs[1] & v <= qs[2])
+      
+      # mid-point of erased segment
+      mid_pos <- sample(pp, 1) # vector index
+      mid_rad <- loc[mid_pos]
+      low_rad <- (mid_rad - width/2) %% (2*pi) # location of start point in radians based on location
+      high_rad <- (mid_rad + width/2) %% (2*pi) # wrap back onto circle
+      low_pos <- which.min(abs(loc - low_rad))
+      high_pos <- which.min(abs(loc - high_rad))
+      
+      # erase segment with NAs
+      v_new[low_pos:high_pos] <- NA
+      
+      # find the value for the midpoint of the erasure based on the eligible quantiles
+      v_low <- quantile(v, v_quantiles[1])
+      v_high <- quantile(v, v_quantiles[2])
+      v_elig <- v[v > v_low & v < v_high]
+      v_point <- sample(v_elig, 1) # sample only from eligible quantiles
+      # place this value sample/point at the mid-point location for interpolation
+      v_new[mid_pos] <- v_point
+      
+      # use cubic spline interpolation to connect the dots
+      v_new <- zoo::na.spline(v_new)
+      attr(v_new, "ecent") <- mid_pos
+      attr(v_new, "delta") <- v[mid_pos] - v_point
+      #attr(v_new, "delta_pct") <- ((v[mid_pos] - v_point)/v[mid_pos]) * 100
+      attr(v_new, "pct_orig") <- (v_point/v[mid_pos]) * 100
+      return(v_new)
+      
+      #  # tmp fill
       # to fill rows of a matrix with the same vector, we need to recall that matrices are filled column-wise, not row-wise.
       # Thus, we can either double transpose the matrix for the operation, or use rep() to replicate the vector for columnwise assignment
       # https://stackoverflow.com/questions/11424047/assigning-values-to-rows-from-a-vector
-      self$tvals[trial:private$pvt_n_trials, pos_vec] <- runif(size_deg) #pracma::repmat(runif(size_deg), n=length(trial:private$pvt_n_trials), m=1)
-      return(self)
+      # self$tvals[trial:private$pvt_n_trials, pos_vec] <- runif(size_deg) #pracma::repmat(runif(size_deg), n=length(trial:private$pvt_n_trials), m=1)
+      # return(self)
     },
     get_n_trials = function() {
       private$pvt_n_trials
