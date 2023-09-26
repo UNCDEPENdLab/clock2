@@ -152,7 +152,7 @@ m5 <- bpnreg::bpnme(pred.I = pos_shifted ~ vmax_loc_scaled*vmax_scaled + resp_th
 
 # initial Gaussian glms: good for manipulation checks
 # only the value bump
-m1 <- lmer(pos_shifted ~ scale(vmax_location)*scale(vmax) + (1|subject), df1 )
+m1 <- lmerTest::lmer(pos_shifted ~ scale(vmax_location)*scale(vmax) + (1|subject), df1 )
 summary(m1)
 car::Anova(m1, '3')
 # add the previous response/outcome (win-stay/lose-shift)
@@ -192,11 +192,10 @@ mlist <- list()
 for (i in 1:1000) {
   df$u_location[!df$u_present] <- runif(length(df$u_location[!df$u_present]), 0, 360)
   df$att_location[!df$att_present] <- runif(length(df$att_location[!df$att_present]), 0, 360)
-  mi <- lmer(pos_shifted ~ scale(vmax_location):epoch + 
-               scale(u_location)*u_present + 
-               scale(att_location)*att_present +
-               resp_theta_c_lag*outcome_lag:epoch + outcome_lag +
-               vmax_loc_lag1:epoch + vmax_loc_lag2:epoch +
+  mi <- lmerTest::lmer(pos_shifted ~ scale(vmax_location)*scale(vmax)*gauss_sd + 
+               scale(u_location)*u_present*gauss_sd + 
+               scale(att_location)*att_present*gauss_sd +
+               resp_theta_c_lag*outcome_lag*gauss_sd +
                (1|subject), 
              df)
   mdf <- broom.mixed::tidy(mi)
