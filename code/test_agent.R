@@ -38,8 +38,9 @@ contingency$get_weights()
 
 
 # used in prolific
-tt <- troll_world$new(n_trials=345, values=contingency$get_wfunc(), drift_sd=5) # set up troll world
-tt$apply_flex(high_avg = 1, high_spread = 0)
+tt <- troll_world$new(n_trials=345, values=contingency$get_wfunc(), drift_sd=0) # set up troll world
+tt$apply_flex(high_avg = 1, high_spread = 0, jump_high=FALSE)
+tt$setup_erasure_blocks()
 plot(tt$spread) # prominence of bump vs floor over trials, shows switches, bump drifts in Gaussian random walk
 
 # stable 100-trial contingency for model validation
@@ -48,23 +49,39 @@ tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 100, jump_high = FALSE
 
 plot(tt$spread)
 
-plot(tt$get_starting_values())
+# stable 100-trial contingency for model validation
+# tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0)
+# tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 100, jump_high = FALSE)
+# plot(tt$spread)
+# 
+# plot(tt$get_starting_values())
 # aa <- tt$get_values_matrix("original", quiet=F) # original values (should be constant over trials)
 # aa <- tt$get_values_matrix("drift", quiet=F) # drift alone
 # aa <- tt$get_values_matrix("flex", quiet=F) # flex alone
 aa <- tt$get_values_matrix("objective", quiet=F) # all manipulations, matrix of expected values, p_reward =0.7 fixed for now
 
-aa[1:5, 1:10]
-tt$reset_counter()
-tt$get_next_values()[1:10]
+# aa[1:5, 1:10]
+# tt$reset_counter()
+# tt$get_next_values()[1:10]
+
+loc <- round(tt$get_pvec(), 2)
+
 
 if (animated_plot) {
+  
   for (ii in 1:nrow(aa)) {
-    plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii]), ylim = range(aa))
-    Sys.sleep(.1)
+    if (tt$erasure_segments$erase_condition[ii] == "erasure") {
+      ss <- paste(", er:", round(tt$erasure_segments[ii,"segment_min"], 2))
+    } else {
+      ss <- ""
+    }
+    plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii], ss), ylim = range(aa), xaxt='n')
+    axis(side = 1, at = seq(1, 360, by=30), labels= loc[seq(1, 360, by=30)])
+    Sys.sleep(.2)
+    
   }
 }
-
+  
 inq_val <- round(t(tt$get_values_matrix()),0)
 write.csv(inq_val,file = '2023-09-12-Design-File-asMatrix.csv')
 
@@ -93,6 +110,8 @@ plot(values$vmax_location)
 ## completely static contingency
 tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0, )
 #plot(tt$spread)
+tt$apply_flex(high_avg = 1, high_spread = 0, jump_high=FALSE)
+tt$setup_erasure_blocks(timeout_trials = 1)
 plot(tt$get_starting_values())
 tt$reset_counter()
 # aa <- tt$get_values_matrix("original", quiet=F) # original values (should be constant over trials)
@@ -106,7 +125,7 @@ aa <- tt$get_values_matrix("objective", quiet=F) # all manipulations
 
 
 ## try out sceptic agent
-sceptic_agent <- scepticc$new(n_basis=12, n_points=200, contingency=tt)
+sceptic_agent <- scepticc$new(n_basis=12, n_points=360, contingency=tt)
 #sceptic_agent$update_weights(tau=pi/2, outcome=100)
 # sceptic_agent$emit_choice()
 #plot(sceptic_agent$get_choice_probs(), type="l")
@@ -125,6 +144,9 @@ sceptic_agent$beta <- 5
 
 
 learning_history <- sceptic_agent$run_contingency(optimize = FALSE)
+world <- sceptic_agent$get_contingency()
+df <- world$get_choices()
+
 h <- sceptic_agent$get_entropy_history()
 spread <- ttd$spread
 v <- ttd$get_values_matrix(type = "objective")

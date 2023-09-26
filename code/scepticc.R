@@ -236,6 +236,9 @@ scepticc <- R6::R6Class(
         self$update_weights(choice, outcome=history$outcome[i], model="decay")
       }
       return(history)
+    },
+    get_contingency = function() {
+      private$pvt_contingency
     }
     
 
