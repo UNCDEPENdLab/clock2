@@ -1,4 +1,4 @@
-setwd("~/clock2")
+setwd("~/code/clock2")
 source("code/von_mises_basis.R")
 source("code/clock2_troll_world.R")
 source("code/scepticc.R")
@@ -13,6 +13,8 @@ width_sd <- 20 # fixed, how wide are the underlying Gaussians
 bump_prominence <- 8 # bump will always be higher, but it will change
 bump_value <- mean_val * bump_prominence
 bump_center <- sample(seq(0, 360, by = 10), 1, replace = FALSE)
+
+animated_plot <- F
 
 # VM version
 # contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights=c(values, bump_value), widths = rep(width_sd, ncenters+1))
@@ -43,6 +45,7 @@ plot(tt$spread) # prominence of bump vs floor over trials, shows switches, bump 
 # stable 100-trial contingency for model validation
 tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0)
 tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 100, jump_high = FALSE)
+
 plot(tt$spread)
 
 plot(tt$get_starting_values())
@@ -55,11 +58,12 @@ aa[1:5, 1:10]
 tt$reset_counter()
 tt$get_next_values()[1:10]
 
-for (ii in 1:nrow(aa)) {
-  plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii]), ylim = range(aa))
-  Sys.sleep(.1)
+if (animated_plot) {
+  for (ii in 1:nrow(aa)) {
+    plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii]), ylim = range(aa))
+    Sys.sleep(.1)
+  }
 }
-
 
 inq_val <- round(t(tt$get_values_matrix()),0)
 write.csv(inq_val,file = '2023-09-12-Design-File-asMatrix.csv')
@@ -87,7 +91,7 @@ plot(values$vmax_location)
 
 
 ## completely static contingency
-tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0)
+tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0, )
 #plot(tt$spread)
 plot(tt$get_starting_values())
 tt$reset_counter()
@@ -108,16 +112,40 @@ sceptic_agent <- scepticc$new(n_basis=12, n_points=200, contingency=tt)
 #plot(sceptic_agent$get_choice_probs(), type="l")
 #sceptic_agent$get_weights()
 
-sceptic_agent$beta <- 10
-obj_f <- data.frame(choice = seq(0, 2*pi, length.out=200), value = tt$get_starting_values())
+# dynamic contingency
+ttd <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=5)
+ttd$apply_flex(high_avg = 1, high_spread = 0, low_avg = 40, spread_max = 100, jump_high = T)
+plot(ttd$get_starting_values())
+plot(ttd$spread)
+sceptic_agent <- scepticc$new(n_basis=12, n_points=200, contingency=ttd)
+
+
+sceptic_agent$beta <- 5
+# obj_f <- data.frame(choice = seq(0, 2*pi, length.out=360), value = tt$get_starting_values())
 
 
 learning_history <- sceptic_agent$run_contingency(optimize = FALSE)
+h <- sceptic_agent$get_entropy_history()
+spread <- ttd$spread
+v <- ttd$get_values_matrix(type = "objective")
+vmax <- apply(v, 1, which.max)
+plot(vmax)
+df <- cbind(learning_history, h, spread)
+# ggplot(obj_f, aes(x=choice, y=value)) + geom_line() +
+#   geom_point(data = learning_history, mapping=aes(x=choice, y=outcome, color=trial))
+cor.test(df$h, lag(df$spread, 10))
+ggplot(df, aes(x=trial, y=outcome, color=choice)) + geom_point() +
+  stat_smooth()
 
-ggplot(obj_f, aes(x=choice, y=value)) + geom_line() +
-  geom_point(data = learning_history, mapping=aes(x=choice, y=outcome, color=trial))
+ggplot(df) + geom_line( aes(x=trial, y=h*2)) + geom_point(aes(x = trial, y = choice, color = outcome)) + 
+  scale_color_viridis_b()
 
-ggplot(learning_history, aes(x=trial, y=outcome, color=choice)) + geom_point() +
+ggplot(df) + geom_line( aes(x=trial, y=h*50)) + geom_point(aes(x = trial, y = ttd$spread, color = outcome)) + 
+  scale_color_viridis_b()
+plot(lag(df$spread,n = 10), df$h)
+cor.test(lag(df$spread,10), df$h)
+
+ggplot(df, aes(x=trial, y=choice)) + geom_point() +
   stat_smooth()
 
 
@@ -203,7 +231,7 @@ erase <- function(v, loc, width = pi/6, v_quantiles = c(.25, .75), r_quantiles =
   # which values are eligible for erasure?
   qs <- quantile(v, r_quantiles)
   pp <- which(v >= qs[1] & v <= qs[2])
-
+  
   # mid-point of erased segment
   mid_pos <- sample(pp, 1) # vector index
   mid_rad <- loc[mid_pos]
@@ -264,7 +292,7 @@ g <- ggplot(df, aes(x=timestep, y=value)) + geom_line() +
 
 g + transition_states(trial) +
   ggtitle("Trial {closest_state}, phase: {tt$epoch[as.integer(closest_state)]}")
-  
+
 
 for (ii in 1:nrow(h)) {
   #plot(h[ii,], type="l", main=paste("Basis weights, trial", ii, "epoch", tt$epoch[ii]), ylim = range(h))

@@ -244,6 +244,9 @@ troll_world <- R6::R6Class(
         jv <- rep(0, private$pvt_n_trials)
         jv[high_pos] <- (-1)^sample(1:2, n_jumps, replace=TRUE) * sample(seq(90, 180, by = 10), size = n_jumps, replace=TRUE)
         private$pvt_jump_vec <- cumsum(jv) # use cumsum to allow vectorized shifts of value matrix
+      } else {
+        # populate 0 jump vector
+        private$pvt_jump_vec <- rep(0, private$pvt_n_trials)
       }
 
       # need to regenerate values when requested

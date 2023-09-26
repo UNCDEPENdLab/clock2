@@ -112,6 +112,16 @@ scepticc <- R6::R6Class(
     get_weight_history = function() {
       do.call(rbind, private$pvt_history)
     },
+    get_entropy_history = function() {
+      w <- do.call(rbind, private$pvt_history)
+      wnorm <- w/rowSums(w)
+      h <- NA[seq_len(nrow(wnorm))]
+      for (t in seq_len(nrow(wnorm))) {
+        h[t] <- -sum(wnorm[t,]*log2(wnorm[t,]))
+      }
+      return(h)
+    },
+    
     get_func_history = function() {
       tmp_bf <- private$pvt_bf_set$clone(deep=TRUE)
       h <- self$get_weight_history()
@@ -206,7 +216,7 @@ scepticc <- R6::R6Class(
       
       
       #scale=1/parscale, 
-    }
+    },
     # run_data
     run_data = function() {
       if (is.null(private$pvt_data)) {
