@@ -7,7 +7,7 @@ library(data.table)
 # clock 2.0.1 analysis
 
 
-design_file <- '/Users/andypapale/clock2/2023-09-12-Design-File-asMatrix.csv'
+design_file <- '/Users/andypapale/clock2/2023-09-26-Design-File-asMatrix.csv'
 design <- as.matrix(read_csv(design_file)) %>% 
   as_tibble() %>% select(-`...1`) %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("V"), names_to = "trial") %>%
   mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
