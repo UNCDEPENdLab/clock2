@@ -1,4 +1,5 @@
-setwd("~/code/clock2")
+setwd("~/Data_Analysis/clock2")
+#setwd("~/code/clock2")
 source("code/von_mises_basis.R")
 source("code/clock2_troll_world.R")
 source("code/scepticc.R")
@@ -108,7 +109,7 @@ plot(values$vmax_location)
 
 
 ## completely static contingency
-tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0, )
+tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0)
 #plot(tt$spread)
 tt$apply_flex(high_avg = 1, high_spread = 0, jump_high=FALSE)
 tt$setup_erasure_blocks(timeout_trials = 1)

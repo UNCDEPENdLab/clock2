@@ -1,8 +1,21 @@
 troll_world <- R6::R6Class(
   "troll_world",
   private = list(
+    # private fields
+    pvt_n_trials = 100,            # number of trials
+    pvt_n_timesteps = 200,         # number of timesteps around circle
+    pvt_drift_sd = 0,              # sd of slow drift of contingency across trials (Gaussian random walk)
+    pvt_drift_vec = NULL,          # pre-calculated drift vector
+    pvt_drift_tvals = NULL,        # contingency values with drift only
+    pvt_flex_tvals = NULL,         # contingency values with flex only
+    pvt_objective_tvals = NULL,    # objective values with all manipulations
+    pvt_jump_vec = NULL,           # shift vector for jump of location during high entropy (flex)
+    pvt_clean = FALSE,             # boolean indicating whether contingency values across trials are up to date
+    pvt_choices = NULL,            # data.frame containing history of choices made by sampling agent
+    pvt_pvec = NULL,               # position of values around circle in units of measurement (radians)
+    pvt_has_erasures = FALSE,      # whether this world has erasure dynamics
     
-    pvt_pvec = NULL, # position of values around circle in units of measurement (radians)
+    # private methods
     # determine end of current erasure condition/block
     get_block_end = function(trial=NULL) {
       if (is.null(trial)) trial <- self$cur_trial
@@ -16,6 +29,7 @@ troll_world <- R6::R6Class(
       }
       return(block_end)
     },
+    
     # helper function to determine whether a choice in radians fits within an arc whose boundaries are in radians
     seg_test = function(choice, min_rad = NULL, max_rad = NULL) {
       if (is.null(min_rad) || is.na(min_rad)) return(FALSE) # return FALSE if no valid segment
@@ -35,23 +49,19 @@ troll_world <- R6::R6Class(
       if (to_max_cw < -1e-6) to_max_cw <- to_max_cw + 2*pi
       
       # use floating point math check since there can be small imprecision problems at the boundary
-      if (to_min_ccw + to_max_cw - seg_width_cw < 1e-6) {
-        in_range <- TRUE
-      } else {
-        in_range <- FALSE
-      }
+      in_range <- ifelse(to_min_ccw + to_max_cw - seg_width_cw < 1e-6, TRUE, FALSE)
       return(in_range)
     },
+    
+    # helper to shift a vector x circularly by a number of positions delta
+    # positive values shift the vector left (early values wrap to the end)
+    # negative values shift the vector right (late values wrap to the beginning)
     shift_vec = function(x, delta) {
-      ## converts x[n] into x[n-1] by multiplying the Fourier
-      ## transform on x[n] by z^-1 i.e. by e^-iw
-      ## lifted from emuR package
       N <- length(x)
       delta <- delta %% N # wrap around if shift is larger than length
-      if (delta < 0) delta <- N + delta
-      h <- c(rep(0, delta), 1)
-      stats::filter(x, h, sides = 1, circular = TRUE)[1:N]
+      if (delta == 0L) x else c(tail(x, -delta), head(x, delta))
     },
+    
     # internal function to calculate drifting and flexed values
     calculate_values = function() {
       if (isTRUE(private$pvt_clean)) return(invisible(NULL))
@@ -93,18 +103,11 @@ troll_world <- R6::R6Class(
 
       # cached value matrices are now current
       private$pvt_clean <- TRUE
-    },
-    pvt_n_trials = 100,
-    pvt_n_timesteps = 200,
-    pvt_drift_sd = 0,
-    pvt_drift_vec = NULL,
-    pvt_drift_tvals = NULL, # drift only
-    pvt_flex_tvals = NULL, # flex only
-    pvt_objective_tvals = NULL, # objective values with all manipulations
-    pvt_jump_vec = NULL, # shift vector for jump of location during high entropy (flex)
-    pvt_clean = FALSE,
-    pvt_choices = NULL # history of choices
+    }
+    
   ),
+  
+  # active bindings
   active = list(
     drift_sd = function(v) {
       if (missing(v)) {
@@ -118,6 +121,7 @@ troll_world <- R6::R6Class(
       }
     }
   ),
+  
   public = list(
     # erasure properties
     erasure_segments = list(),
@@ -130,7 +134,7 @@ troll_world <- R6::R6Class(
     
     cur_trial = 1,
     units="radians",
-    tvals=matrix(0, nrow=100, ncol=200),
+    tvals = NULL,
     spread = NULL, # tracks the point spread between min and max (entropy flexing)
     epoch = NULL, # tracks what phase we are in of the entropy manipulation
     erase_condition = NULL, # tracks what erasure phase is active
@@ -138,10 +142,15 @@ troll_world <- R6::R6Class(
     p_reward = 0.7, # current fixed probability for reward
 
     #' @param values A vector of values for every timestep, or a trials x timesteps matrix
-    initialize = function(n_trials = NULL, values = NULL, drift_sd = NULL) {
+    initialize = function(n_trials = NULL, n_timesteps = NULL, values = NULL, drift_sd = NULL) {
       if (!is.null(n_trials)) {
         checkmate::assert_integerish(n_trials, lower=1, len=1L)
         private$pvt_n_trials <- n_trials
+      }
+      
+      if (!is.null(n_timesteps)) {
+        checkmate::assert_integerish(n_timesteps, lower=10, len=1L)
+        private$pvt_n_timesteps <- n_timesteps
       }
 
       if (!is.null(values)) {
@@ -149,9 +158,21 @@ troll_world <- R6::R6Class(
           self$tvals <- pracma::repmat(values, n = private$pvt_n_trials, m = 1)
         } else if (is.matrix(values)) {
           # allow trials x timesteps matrix of values as input
-          stopifnot(nrow(values) == private$pvt_n_trials)
+          if(nrow(values) != private$pvt_n_trials) {
+            warning(glue("Setting n_trials to {nrow(values)} based on values matrix input"))
+            private$pvt_n_trials <- nrow(values)
+          }
+          
+          if(ncol(values) != private$pvt_n_timesteps) {
+            warning(glue("Setting n_timesteps to {ncol(values)} based on values matrix input"))
+            private$pvt_n_timesteps <- ncol(values)
+          }
+          
           self$tvals <- values
         }
+      } else {
+        warning("Initializing troll world with all zeros for value")
+        self$tvals <- matrix(0, nrow=private$pvt_n_trials, ncol = private$pvt_n_timesteps)
       }
 
       private$pvt_n_timesteps <- ncol(self$tvals)
@@ -195,31 +216,38 @@ troll_world <- R6::R6Class(
       )
     },
     
+    # method to erase a segment on a given trial
     erase_segment = function(erase = TRUE, trial=NULL) {
+      # default to current trial if not specified
       if (is.null(trial)) trial <- self$cur_trial
+      
+      # get untainted value vector for this trial -- other manipulations (e.g., flex) will be added later
       v <- self$get_values_matrix(type = "original")[trial,]
-      loc <- private$pvt_pvec
+      loc <- private$pvt_pvec # positions of each timestep around circle
       
       stopifnot(length(v) == length(loc))
-      v_new <- v
+      v_new <- v # value function to be updated by erasure
       
-      # which values are eligible for erasure?
+      # Examine which positions are eligible for erasure based on their quantiles in the value vector
       qs <- quantile(v, self$erasure_elig_pos_qs)
       pp <- which(v >= qs[1] & v <= qs[2])
       
-      # mid-point of erased segment
-      mid_pos <- sample(pp, 1) # vector index
-      mid_rad <- loc[mid_pos]
+      # Choose the mid-point of erased segment at random from eligible positions
+      mid_pos <- sample(pp, 1) # vector index of midpoint
+      mid_rad <- loc[mid_pos]  # position of midpoint in radians
       
+      # Find the extent of the segment by going CCW and CW by width/2
       low_rad <- (mid_rad - self$erasure_width/2) %% (2*pi) # location of start point in radians based on location
-      high_rad <- (mid_rad + self$erasure_width/2) %% (2*pi) # wrap back onto circle
-      low_pos <- which.min(abs(loc - low_rad))
-      high_pos <- which.min(abs(loc - high_rad))
+      high_rad <- (mid_rad + self$erasure_width/2) %% (2*pi) # wrap back onto circle by modulus
+      low_pos <- which.min(abs(loc - low_rad)) # vector index of starting point
+      high_pos <- which.min(abs(loc - high_rad)) # vector index of ending point
       
-      # handle scenario where we wrap around 0/2*pi
+      # handle scenario where we wrap around 0/2*pi boundary
       if (low_pos > high_pos) {
+        wrap <- TRUE
         erase_indices <- c(1:high_pos, low_pos:length(loc))
       } else {
+        wrap <- FALSE
         erase_indices <- low_pos:high_pos
       }
       
@@ -227,25 +255,30 @@ troll_world <- R6::R6Class(
       v_new[erase_indices] <- NA
       
       # find the value for the midpoint of the erasure based on the eligible quantiles
-      v_low <- quantile(v, self$erasure_elig_v_qs[1])
-      v_high <- quantile(v, self$erasure_elig_v_qs[2])
-      v_elig <- v[v > v_low & v < v_high]
+      v_qs <- quantile(v, self$erasure_elig_v_qs)
+      v_elig <- v[v > v_qs[1L] & v < v_qs[2L] ]
       v_point <- sample(v_elig, 1) # sample only from eligible quantiles
       # place this value sample/point at the mid-point location for interpolation
       v_new[mid_pos] <- v_point
       
       # use cubic spline interpolation to connect the dots
-      v_new <- zoo::na.spline(v_new)
-      attr(v_new, "ecent") <- mid_pos
-      attr(v_new, "delta") <- v[mid_pos] - v_point
-      #attr(v_new, "delta_pct") <- ((v[mid_pos] - v_point)/v[mid_pos]) * 100
+      if (wrap) {
+        # for spline interpolation, we need to put erasure away from boundaries since na.spline doesn't think circularly
+        v_new <- private$shift_vec(v_new, length(v_new)/2)
+        v_new <- zoo::na.spline(v_new)
+        v_new <- private$shift_vec(v_new, -length(v_new)/2)
+      } else {
+        v_new <- zoo::na.spline(v_new)
+      }
+      
+      attr(v_new, "ecent") <- mid_pos # center of erasure as vector index
+      attr(v_new, "delta") <- v[mid_pos] - v_point # change in value at midpoint
       attr(v_new, "pct_orig") <- (v_point/v[mid_pos]) * 100
       
       # apply erasure to original value vector from here to the end.
       if (isTRUE(erase)) {
         replace_trials <- trial:private$pvt_n_trials
         self$tvals[replace_trials,] <- matrix(v_new, nrow=length(replace_trials), ncol = private$pvt_n_timesteps, byrow=TRUE)
-        
       }
       
       # need to regenerate values when requested since erasure altered tvals
@@ -261,15 +294,6 @@ troll_world <- R6::R6Class(
       self$erasure_segments$timeouts_remain[trial:block_end] <- self$timeout_trials
       
       return(v_new)
-      
-      #  # tmp fill
-      # to fill rows of a matrix with the same vector, we need to recall that matrices are filled column-wise, not row-wise.
-      # Thus, we can either double transpose the matrix for the operation, or use rep() to replicate the vector for columnwise assignment
-      # https://stackoverflow.com/questions/11424047/assigning-values-to-rows-from-a-vector
-      # self$tvals[trial:private$pvt_n_trials, pos_vec] <- runif(size_deg) #pracma::repmat(runif(size_deg), n=length(trial:private$pvt_n_trials), m=1)
-      # return(self)
-      
-      
     },
     get_n_trials = function() {
       private$pvt_n_trials
@@ -302,6 +326,7 @@ troll_world <- R6::R6Class(
       return(self)
     },
     setup_erasure_blocks = function(erase_prop = 1/3, attention_prop = 1/3, block_length = 15, disappear_clicks = 2, timeout_trials = 0) {
+      private$pvt_has_erasures <- TRUE
       self$disappear_clicks <- disappear_clicks
       self$timeout_trials <- timeout_trials
 
@@ -376,7 +401,6 @@ troll_world <- R6::R6Class(
       self$erasure_segments$trial_type <- aa
       
       # seed erased segments that start each attention and erasure phase
-      
       pshift <- which(aa != dplyr::lag(aa, default = "FIRST") & aa != "no erasure")
       for (pp in pshift) {
         e <- ifelse(aa[pp] == "erasure", TRUE, FALSE)
@@ -439,34 +463,19 @@ troll_world <- R6::R6Class(
       # need to regenerate values when requested
       private$pvt_clean <- FALSE
     },
+    
     #' @description rescale a vector to have a given 2*spread range around the mean and a designated mean
-    v_rescale = function(x, spread = 20, mean_val=50) {
+    v_rescale = function(x, spread = 20, mean_val=50, force_min = 1) {
       #mx <- mean(x)
       y <- scales::rescale(x, to = c(mean_val - spread, mean_val + spread))
       adjust <- mean_val - mean(y)
       y <- y + adjust
+      
+      # if we want to force a given minimum to hold, apply it here (can undermine the mean)
+      if (isTRUE(force_min)) y <- y - (min(y) - force_min)
       return(y)
     },
-    # get_flex_values = function(jump_high=TRUE) {
-    #   tmat <- self$tvals
-    #   if (isTRUE(jump_high)) {
-    #     high_pos <- which(dplyr::lag(self$epoch) != self$epoch & self$epoch == "high")
-    #     for (h in high_pos) {
-    #       # shift by 60-90 degrees CCW or CW
-    #       new_vec <- private$shift_vec(tmat[h,], (-1)^sample(1:2, 1)*sample(seq(90, 180, by=10), size = 1))
-    #       tmat[h:nrow(tmat), ] <- pracma::repmat(new_vec, n=nrow(tmat) - h + 1, m=1) # shift subsequent rows
-    #     }
-    #   }
-    # 
-    #   # apply the flex
-    #   vv <- sapply(seq_len(private$pvt_n_trials), function(i) {
-    #     tval <- self$v_rescale(tmat[i,], spread=self$spread[i])
-    #     # if (isTRUE(jump_high) && i > 1 && self$epoch[i] == "high" && self$epoch[i-1] != "high") {
-    #     #   tval <- private$shift_vec()
-    #     # }
-    #   })
-    #   return(vv)
-    # },
+    
     get_cur_values = function() {
       if (self$cur_trial > private$pvt_n_trials) {
         warning("You have already iterated through trials. Use $reset_counter to start over")
@@ -481,31 +490,13 @@ troll_world <- R6::R6Class(
       as.list(self$erasure_segments[self$cur_trial,])
     },
     harvest = function(choice) {
-      # handle erasure condition
-      # if (!is.null(self$erase_condition)) {
-      #   cur_condition <- self$erase_condition[self$cur_trial]
-      #   
-      #   # for now an NA for segment shown indicates that we need to do something
-      #   if (is.na(self$erasure_segments$segment_shown[self$cur_trial])) {
-      #     if (cur_condition == "no erasure") {
-      #       self$erasure_segments$segment_shown[self$cur_trial] <- FALSE # never show
-      #     } else if (cur_condition == "erasure") {
-      #       if (self$erasure_segments$segment)
-      #       self$erase_segment(erase = TRUE)
-      #         
-      #     }
-      #   }
-      #   ##clicks_remain = NA_integer_,
-      #   ##timeouts_remain = NA_integer_
-      #   
-      # }
-      
       v <- self$get_cur_values()
       s <- self$get_cur_segment()
       
-      # computationally expensive location of the closest matching position
+      # computationally expensive location of the closest matching position to choice
       pos <- which.min(abs(choice - private$pvt_pvec))
       
+      # test whether choice is in the current erasure/attention segment. Will be FALSE if no segment
       in_seg <- private$seg_test(choice, s$segment_min, s$segment_max)
       
       # harvest probabilistic outcome
@@ -521,28 +512,39 @@ troll_world <- R6::R6Class(
       private$pvt_choices$segment_min[self$cur_trial] <- s$segment_min
       private$pvt_choices$segment_max[self$cur_trial] <- s$segment_max
       
-      # if the next trial is in the same erase condition, handle dynamics of segments disappearing
-      if (self$cur_trial < private$pvt_n_trials && 
+      # if the next trial is in the same erase condition, handle dynamics of segments disappearing and appearing
+      if (private$pvt_has_erasures && self$cur_trial < private$pvt_n_trials && 
           self$erasure_segments$trial_type[self$cur_trial] == self$erasure_segments$trial_type[self$cur_trial + 1]) {
         
+        generate_new_erasure <- FALSE
+        
+        # if person clicks in segment, we should decrement the clicks that remain and potentially resample an erasure if we hit 0
         if (in_seg) {
+          # this needs to fire after timeouts collapse, even if they click outside segment
           if (self$erasure_segments$clicks_remain[self$cur_trial] <= 1 && self$erasure_segments$timeouts_remain[self$cur_trial] == 0) {
             # if this was the last click before the segment disappears and there is no timeout, erase a new segment
-            e <- ifelse(self$erasure_segments$trial_type[self$cur_trial] == "erasure", TRUE, FALSE)
-            self$erase_segment(erase = e, trial = self$cur_trial + 1)
+            generate_new_erasure <- TRUE
           } else if (self$erasure_segments$clicks_remain[self$cur_trial] > 0) {
             # decrement clicks remain
             self$erasure_segments$clicks_remain[(self$cur_trial + 1):private$get_block_end()] <- self$erasure_segments$clicks_remain[self$cur_trial] - 1
           }
         } else if (!is.na(self$erasure_segments$timeouts_remain[self$cur_trial]) && self$erasure_segments$clicks_remain[self$cur_trial] == 0L) {
+          #turn off segment display
+          self$erasure_segments$segment_shown[(self$cur_trial + 1):private$get_block_end()] <- FALSE
+          
+          # decrement timeouts_remain if we have already hit clicks_remain == 0
           if (self$erasure_segments$timeouts_remain[self$cur_trial] > 0) {
             self$erasure_segments$timeouts_remain[(self$cur_trial + 1):private$get_block_end()] <- self$erasure_segments$timeouts_remain[self$cur_trial] - 1
           } else if (self$erasure_segments$timeouts_remain[self$cur_trial] == 0) {
-            #turn off segment display
-            self$erasure_segments$segment_shown[(self$cur_trial + 1):private$get_block_end()] <- FALSE
+            # if the timeouts have elapsed, sample new erasure
+            generate_new_erasure <- TRUE
           }
         }
-          
+        
+        if (generate_new_erasure) {
+          e <- ifelse(self$erasure_segments$trial_type[self$cur_trial] == "erasure", TRUE, FALSE)
+          self$erase_segment(erase = e, trial = self$cur_trial + 1)
+        }
       }
       
       # increment trial counter
@@ -558,3 +560,55 @@ troll_world <- R6::R6Class(
     }
   )
 )
+
+
+##
+#  # tmp fill
+# to fill rows of a matrix with the same vector, we need to recall that matrices are filled column-wise, not row-wise.
+# Thus, we can either double transpose the matrix for the operation, or use rep() to replicate the vector for columnwise assignment
+# https://stackoverflow.com/questions/11424047/assigning-values-to-rows-from-a-vector
+# self$tvals[trial:private$pvt_n_trials, pos_vec] <- runif(size_deg) #pracma::repmat(runif(size_deg), n=length(trial:private$pvt_n_trials), m=1)
+# return(self)
+
+
+
+# get_flex_values = function(jump_high=TRUE) {
+#   tmat <- self$tvals
+#   if (isTRUE(jump_high)) {
+#     high_pos <- which(dplyr::lag(self$epoch) != self$epoch & self$epoch == "high")
+#     for (h in high_pos) {
+#       # shift by 60-90 degrees CCW or CW
+#       new_vec <- private$shift_vec(tmat[h,], (-1)^sample(1:2, 1)*sample(seq(90, 180, by=10), size = 1))
+#       tmat[h:nrow(tmat), ] <- pracma::repmat(new_vec, n=nrow(tmat) - h + 1, m=1) # shift subsequent rows
+#     }
+#   }
+# 
+#   # apply the flex
+#   vv <- sapply(seq_len(private$pvt_n_trials), function(i) {
+#     tval <- self$v_rescale(tmat[i,], spread=self$spread[i])
+#     # if (isTRUE(jump_high) && i > 1 && self$epoch[i] == "high" && self$epoch[i-1] != "high") {
+#     #   tval <- private$shift_vec()
+#     # }
+#   })
+#   return(vv)
+# },
+
+
+# handle erasure condition
+# if (!is.null(self$erase_condition)) {
+#   cur_condition <- self$erase_condition[self$cur_trial]
+#   
+#   # for now an NA for segment shown indicates that we need to do something
+#   if (is.na(self$erasure_segments$segment_shown[self$cur_trial])) {
+#     if (cur_condition == "no erasure") {
+#       self$erasure_segments$segment_shown[self$cur_trial] <- FALSE # never show
+#     } else if (cur_condition == "erasure") {
+#       if (self$erasure_segments$segment)
+#       self$erase_segment(erase = TRUE)
+#         
+#     }
+#   }
+#   ##clicks_remain = NA_integer_,
+#   ##timeouts_remain = NA_integer_
+#   
+# }
