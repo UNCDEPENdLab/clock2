@@ -1,9 +1,9 @@
-setwd("~/Data_Analysis/clock2")
-#setwd("~/code/clock2")
+library(tidyverse)
+if (sum(stringr::str_detect(Sys.info(), "Alex|alexdombrovski"))>1) {setwd("~/code/clock2/")} else {
+  setwd("~/Data_Analysis/clock2")}
 source("code/von_mises_basis.R")
 source("code/clock2_troll_world.R")
 source("code/scepticc.R")
-library(tidyverse)
 ncenters <- 9 # how many gaussians there are
 mean_val <- 10 # mean reward rate
 sd_val <- 2 # standard deviation of reward / range of rewards
@@ -39,16 +39,32 @@ contingency$get_weights()
 
 
 # used in prolific
-tt <- troll_world$new(n_trials=345, values=contingency$get_wfunc(), drift_sd=0) # set up troll world
-tt$apply_flex(high_avg = 1, high_spread = 0, jump_high=FALSE)
-tt$setup_erasure_blocks()
-plot(tt$spread) # prominence of bump vs floor over trials, shows switches, bump drifts in Gaussian random walk
+# tt <- troll_world$new(n_trials=345, values=contingency$get_wfunc(), drift_sd=4) # set up troll world
+# tt$apply_flex(high_avg = 1, high_spread = 0, jump_high=FALSE)
+# tt$setup_erasure_blocks()
+# plot(tt$spread) # prominence of bump vs floor over trials, shows switches, bump drifts in Gaussian random walk
 
 # stable 100-trial contingency for model validation
-tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0)
+tt <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=1)
+tt$setup_erasure_blocks()
 tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 100, jump_high = FALSE)
-
+sceptic_agent <- scepticc$new(n_basis=12, n_points=360, contingency=tt, beta = 40, u_prob = 0)
+df <- sceptic_agent$run_contingency()
+tt$get_choices()
 plot(tt$spread)
+df$h <- sceptic_agent$get_entropy_history()
+u <- tt$get_choices() %>% mutate(u = trial_type=="erasure" & segment_shown)
+df <- df %>% inner_join(u)
+sum(df$in_segment)
+sum(df$u)
+
+ggplot(df) + geom_line( aes(x=trial, y=h*2)) + geom_point(aes(x = trial, y = choice, alpha = outcome)) + 
+  scale_color_viridis_d() + geom_errorbar(aes(x = trial, y = (segment_min + segment_max)/2, ymin = segment_min, ymax = segment_max, color = trial_type)) +
+  theme_minimal()
+cor.test(as.numeric(df$u), df$h)
+
+ggplot(df) + geom_line( aes(x=trial, y=h*50)) + geom_point(aes(x = trial, y = tt$spread, color = outcome)) + 
+  scale_color_viridis_b()
 
 # stable 100-trial contingency for model validation
 # tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0)

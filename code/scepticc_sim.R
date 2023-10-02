@@ -48,7 +48,8 @@ idf_list <- idf %>% group_split(alpha, beta)
 
 # make cluster ----
 f <- Sys.getenv('PBS_NODEFILE')
-ncores <- detectCores()
+ncores <- detectCores() - 1
+
 nodelist <- if (nzchar(f)) readLines(f) else rep('localhost', ncores)
 cat("Node list allocated to this job\n")
 print(nodelist)
@@ -72,7 +73,7 @@ results <- foreach(j = seq_len(length(idf_list)), .packages=c("R6", "tidyverse")
                    df <- idf_list[[j]]
                    df$r <- NA
                    df_list <- list()
-                   for (i in seq_len(nrow(df))) {
+                   for (i in seq_len(nrow(df)/10)) {
                    # set up contingency
                    tt <- troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=df$drift[i])
                    tt$apply_flex(high_avg = 1, high_spread = 0, low_avg = df$low_avg[i], spread_max = 100, jump_high = T)
@@ -97,6 +98,7 @@ results <- foreach(j = seq_len(length(idf_list)), .packages=c("R6", "tidyverse")
                      scale_color_viridis_b()
                    }
                    df$r[i] <- cor(lag(d$spread,10), d$h, use = "complete.obs")
+                   df$tt[i] <- tt
                    }
                    return(df)
                  }
