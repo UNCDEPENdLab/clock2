@@ -6,7 +6,8 @@ scepticc <- R6::R6Class(
     pvt_alpha = 0.1,
     pvt_gamma = 0.3,
     pvt_beta = 2,
-    pvt_u_prob = 0.0833, # p(sampling erased segment), default: at chance
+    pvt_epsilon_e = 0.0833, # uncertainty attitude -- probability of choosing erased segment (prior at chance)
+    pvt_epsilon_a = 0.0833, # attention attitude -- probability of choosing attention segment
     pvt_n_points = 50,
     pvt_model = "decay", # what variant of sceptic to run
     pvt_history = NULL,
@@ -183,10 +184,16 @@ scepticc <- R6::R6Class(
       }
       
       if (!is.null(pvec)) {
-        private$pvt_alpha <- pvec["alpha"]
-        private$pvt_beta <- pvec["beta"]
-        private$pvt_gamma <- pvec["gamma"]
-        private$pvt_u_prob <- pvec["u_prob"]
+        if (!is.na(pvec["alpha"])) private$pvt_alpha <- pvec["alpha"]
+        if (!is.na(pvec["beta"])) private$pvt_beta <- pvec["beta"]
+        if (!is.na(pvec["gamma"])) private$pvt_gamma <- pvec["gamma"]
+        if (!is.na(pvec["epsilon_e"])) private$pvt_epsilon_e <- pvec["epsilon_e"]
+        if (!is.na(pvec["epsilon_a"])) private$pvt_epsilon_e <- pvec["epsilon_a"]
+      }
+
+      p <- runif(1)
+      if (p < epsilon) {
+        s  <- private$pvt_contingency$get_current_se
       }
       
       n_trials <- private$pvt_contingency$get_n_trials()

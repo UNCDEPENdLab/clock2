@@ -143,6 +143,13 @@ aa <- tt$get_values_matrix("objective", quiet=F) # all manipulations
 
 ## try out sceptic agent
 sceptic_agent <- scepticc$new(n_basis=12, n_points=360, contingency=tt)
+sceptic_agent$beta <- 5
+learning_history <- sceptic_agent$run_contingency(optimize = FALSE)
+world <- sceptic_agent$get_contingency()
+df <- world$get_choices()
+world$erasure_segments
+
+
 #sceptic_agent$update_weights(tau=pi/2, outcome=100)
 # sceptic_agent$emit_choice()
 #plot(sceptic_agent$get_choice_probs(), type="l")

@@ -489,7 +489,7 @@ troll_world <- R6::R6Class(
     get_cur_segment = function() {
       as.list(self$erasure_segments[self$cur_trial,])
     },
-    harvest = function(choice) {
+    harvest = function(choice, choose_erasure = TRUE) {
       v <- self$get_cur_values()
       s <- self$get_cur_segment()
       
