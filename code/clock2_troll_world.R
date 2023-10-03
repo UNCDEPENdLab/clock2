@@ -68,7 +68,7 @@ troll_world <- R6::R6Class(
       
       has_drift <- abs(private$pvt_drift_sd) > 1e-5
       has_flex <- !is.null(self$spread)
-      has_jump <- !is.null(private$pvt_jump_vec)
+      has_jump <- sum(abs(private$pvt_jump_vec) > 0)
 
       if (has_drift) {
         # use sweep for efficient addition of a vector to each row
@@ -188,6 +188,9 @@ troll_world <- R6::R6Class(
       
       # since circle wraps, we want to avoid adding a redundant basis function at 0 vs. at 2*pi
       private$pvt_pvec <- seq(0, max_val - d_theta, by=d_theta)
+      
+      # populate 0 jump vector if there are no jumps or apply_flex has not been run
+      private$pvt_jump_vec <- rep(0, private$pvt_n_trials)
 
       if (!is.null(drift_sd)) {
         checkmate::assert_integerish(drift_sd, lower=0, len=1L)
@@ -448,18 +451,15 @@ troll_world <- R6::R6Class(
       self$spread <- spread[1:private$pvt_n_trials]
       self$epoch <- epoch[1:private$pvt_n_trials]
 
-      # handle the jump of location during high entropy periods
+      # handle the jump of location during high entropy periods -- overrides default 0 jump vector
       if (isTRUE(jump_high)) {
         high_pos <- which(dplyr::lag(self$epoch) != self$epoch & self$epoch == "high")
         n_jumps <- length(high_pos)
         jv <- rep(0, private$pvt_n_trials)
         jv[high_pos] <- (-1)^sample(1:2, n_jumps, replace=TRUE) * sample(seq(90, 180, by = 10), size = n_jumps, replace=TRUE)
         private$pvt_jump_vec <- cumsum(jv) # use cumsum to allow vectorized shifts of value matrix
-      } else {
-        # populate 0 jump vector
-        private$pvt_jump_vec <- rep(0, private$pvt_n_trials)
       }
-
+      
       # need to regenerate values when requested
       private$pvt_clean <- FALSE
     },

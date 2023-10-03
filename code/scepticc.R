@@ -6,7 +6,7 @@ scepticc <- R6::R6Class(
     pvt_alpha = 0.1,
     pvt_gamma = 0.3,
     pvt_beta = 2,
-    pvt_epsilon_e = 0.0833, # uncertainty attitude -- probability of choosing erased segment (prior at chance)
+    pvt_epsilon_u = 0.0833, # uncertainty attitude -- probability of choosing erased segment (prior at chance)
     pvt_epsilon_a = 0.0833, # attention attitude -- probability of choosing attention segment
     pvt_n_points = 50,
     pvt_model = "decay", # what variant of sceptic to run
@@ -41,19 +41,19 @@ scepticc <- R6::R6Class(
         private$pvt_beta <- v
       }
     },
-    u_prob = function(v) {
+    epsilon_u = function(v) {
       if (missing(v)) {
-        return(private$pvt_u_prob)
+        return(private$pvt_epsilon_u)
       } else {
         checkmate::assert_number(v, lower=0, upper=1)
-        private$pvt_u_prob <- v
+        private$pvt_epsilon_u <- v
       }
     }
     
   ),
   public = list(
     initialize = function(n_basis = 12, n_points = NULL, basis_sd = 0.3, weights_0 = 0, elig_sd = 0.3, 
-                          alpha=NULL, gamma=NULL, beta=NULL, u_prob = NULL, contingency=NULL, data = NULL, seed=NULL) {
+                          alpha=NULL, gamma=NULL, beta=NULL, epsilon_u = NULL, contingency=NULL, data = NULL, seed=NULL) {
       checkmate::assert_number(n_basis, lower=2)
       if (checkmate::test_number(weights_0)) weights_0 <- rep(weights_0, n_basis)
       if (checkmate::test_number(basis_sd)) basis_sd <- rep(basis_sd, n_basis)
@@ -80,7 +80,7 @@ scepticc <- R6::R6Class(
       if (!is.null(alpha)) self$alpha <- alpha
       if (!is.null(beta)) self$beta <- beta
       if (!is.null(gamma)) self$gamma <- gamma
-      if (!is.null(u_prob)) self$u_prob <- u_prob
+      if (!is.null(epsilon_u)) self$epsilon_u <- epsilon_u
       
       checkmate::assert_false(!is.null(contingency) & !is.null(data))
       if (!is.null(contingency)) {
@@ -172,7 +172,7 @@ scepticc <- R6::R6Class(
       # print(private$pvt_bf_set$get_wfunc())
       # lookup choice against positions in radians
       seg <- private$pvt_contingency$get_cur_segment()
-      if (seg$trial_type=="erasure" & runif(1, 0, 1) < private$pvt_u_prob) {
+      if (seg$trial_type=="erasure" & runif(1, 0, 1) < private$pvt_epsilon_u) {
         # simply sample the middle half of the erased segment; 
         return(seg$segment_min + runif(1, pi/24, pi/9))} else {
           s <- sample(seq_len(private$pvt_n_points), 1, prob = self$get_choice_probs())
@@ -187,14 +187,14 @@ scepticc <- R6::R6Class(
         if (!is.na(pvec["alpha"])) private$pvt_alpha <- pvec["alpha"]
         if (!is.na(pvec["beta"])) private$pvt_beta <- pvec["beta"]
         if (!is.na(pvec["gamma"])) private$pvt_gamma <- pvec["gamma"]
-        if (!is.na(pvec["epsilon_e"])) private$pvt_epsilon_e <- pvec["epsilon_e"]
-        if (!is.na(pvec["epsilon_a"])) private$pvt_epsilon_e <- pvec["epsilon_a"]
+        if (!is.na(pvec["epsilon_u"])) private$pvt_epsilon_u <- pvec["epsilon_u"]
+        if (!is.na(pvec["epsilon_a"])) private$pvt_epsilon_a <- pvec["epsilon_a"]
       }
 
-      p <- runif(1)
-      if (p < epsilon) {
-        s  <- private$pvt_contingency$get_current_se
-      }
+      # p <- runif(1)
+      # if (p < epsilon) {
+      #   s  <- private$pvt_contingency$get_current_se
+      # }
       
       n_trials <- private$pvt_contingency$get_n_trials()
       
