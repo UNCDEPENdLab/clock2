@@ -496,6 +496,9 @@ troll_world <- R6::R6Class(
       # computationally expensive location of the closest matching position to choice
       pos <- which.min(abs(choice - private$pvt_pvec))
       
+      # force lots of sampling to sort out bugs
+      # if (runif(1) < .9) choice <- s$segment_min + 0.05
+      
       # test whether choice is in the current erasure/attention segment. Will be FALSE if no segment
       in_seg <- private$seg_test(choice, s$segment_min, s$segment_max)
       
@@ -517,27 +520,32 @@ troll_world <- R6::R6Class(
           self$erasure_segments$trial_type[self$cur_trial] == self$erasure_segments$trial_type[self$cur_trial + 1]) {
         
         generate_new_erasure <- FALSE
+        clicks_remain <- self$erasure_segments$clicks_remain[self$cur_trial] # how many clicks remain as of this trial
+        timeouts_remain <- self$erasure_segments$timeouts_remain[self$cur_trial] # how many timeouts remain as of this trial
+        block_end <- private$get_block_end()
+        
+        # small bug in logic here. The last trial in each block will not be decremented as expected because the opening
+        # if block has the cur trial type = trial type + 1. Leaving the bug for now since it doesn't affect dynamics
+        # decrement timeouts_remain if we have already hit clicks_remain == 0
+        if (!is.na(timeouts_remain) && clicks_remain == 0L) {
+          self$erasure_segments$timeouts_remain[(self$cur_trial):block_end] <- timeouts_remain - 1
+          
+          # if the timeouts have elapsed, sample new erasure
+          if (timeouts_remain - 1 == 0) generate_new_erasure <- TRUE
+        }
         
         # if person clicks in segment, we should decrement the clicks that remain and potentially resample an erasure if we hit 0
         if (in_seg) {
           # this needs to fire after timeouts collapse, even if they click outside segment
-          if (self$erasure_segments$clicks_remain[self$cur_trial] <= 1 && self$erasure_segments$timeouts_remain[self$cur_trial] == 0) {
+          if (clicks_remain <= 1 && timeouts_remain == 0) {
             # if this was the last click before the segment disappears and there is no timeout, erase a new segment
             generate_new_erasure <- TRUE
-          } else if (self$erasure_segments$clicks_remain[self$cur_trial] > 0) {
+          } else if (clicks_remain > 0) {
             # decrement clicks remain
-            self$erasure_segments$clicks_remain[(self$cur_trial + 1):private$get_block_end()] <- self$erasure_segments$clicks_remain[self$cur_trial] - 1
-          }
-        } else if (!is.na(self$erasure_segments$timeouts_remain[self$cur_trial]) && self$erasure_segments$clicks_remain[self$cur_trial] == 0L) {
-          #turn off segment display
-          self$erasure_segments$segment_shown[(self$cur_trial + 1):private$get_block_end()] <- FALSE
-          
-          # decrement timeouts_remain if we have already hit clicks_remain == 0
-          if (self$erasure_segments$timeouts_remain[self$cur_trial] > 0) {
-            self$erasure_segments$timeouts_remain[(self$cur_trial + 1):private$get_block_end()] <- self$erasure_segments$timeouts_remain[self$cur_trial] - 1
-          } else if (self$erasure_segments$timeouts_remain[self$cur_trial] == 0) {
-            # if the timeouts have elapsed, sample new erasure
-            generate_new_erasure <- TRUE
+            self$erasure_segments$clicks_remain[(self$cur_trial + 1):block_end] <- clicks_remain - 1
+            
+            # if we've made the last click, turn off segment display
+            if (clicks_remain - 1 == 0) self$erasure_segments$segment_shown[(self$cur_trial + 1):block_end] <- FALSE
           }
         }
         
