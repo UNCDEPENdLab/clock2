@@ -46,9 +46,9 @@ contingency$get_weights()
 
 # stable 100-trial contingency for model validation
 tt <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=1)
-tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
 tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 100, jump_high = FALSE)
-sceptic_agent <- scepticc$new(n_basis=12, n_points=360, contingency=tt, beta = 40, epsilon_u = 0)
+tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
+sceptic_agent <- scepticc$new(n_basis=12, n_points=360, contingency=tt, beta = 40, epsilon_u = .1)
 df <- sceptic_agent$run_contingency()
 tt$get_choices()
 plot(tt$spread)
