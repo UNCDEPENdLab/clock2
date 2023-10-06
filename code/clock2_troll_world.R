@@ -466,13 +466,14 @@ troll_world <- R6::R6Class(
     
     #' @description rescale a vector to have a given 2*spread range around the mean and a designated mean
     v_rescale = function(x, spread = 20, mean_val=50, force_min = 1) {
+      checkmate::assert_number(force_min, lower=0)
       #mx <- mean(x)
       y <- scales::rescale(x, to = c(mean_val - spread, mean_val + spread))
       adjust <- mean_val - mean(y)
       y <- y + adjust
       
       # if we want to force a given minimum to hold, apply it here (can undermine the mean)
-      if (isTRUE(force_min)) y <- y - (min(y) - force_min)
+      if (force_min > 0) y <- y - (min(y) - force_min)
       return(y)
     },
     
