@@ -87,7 +87,7 @@ loc <- round(tt$get_pvec(), 2)
 if (animated_plot) {
   
   for (ii in 1:nrow(aa)) {
-    if (tt$erasure_segments$erase_condition[ii] == "erasure") {
+    if (tt$erasure_segments$trial_type[ii] == "erasure") {
       ss <- paste(", er:", round(tt$erasure_segments[ii,"segment_min"], 2))
     } else {
       ss <- ""
