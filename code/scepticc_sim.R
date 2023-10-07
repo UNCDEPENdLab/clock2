@@ -19,17 +19,7 @@ require(utils)
 parallel = F
 
 # set up basic contingency
-ncenters <- 9 # how many gaussians there are
-mean_val <- 10 # mean reward rate
-sd_val <- 2 # standard deviation of reward / range of rewards
-centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
-values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
-width_sd <- 20 # fixed, how wide are the underlying Gaussians
-sanity_checks = F # diagnostic plots inside simulation loop
-
-ntrials = 300
 niterations = 100 # aiming for 100
-
 # prepare input df, starting on a coarse grid
 idf <- expand.grid(alpha = c(.05, .1, .25, .5), gamma = c(.1, .25, .5, .9),                 # model params
                    beta = c(1, 5, 20, 40), epsilon_u = c(0.01, 0.0833, 0.33, 0.99), # 0.0833 is at chance
@@ -38,7 +28,7 @@ idf <- expand.grid(alpha = c(.05, .1, .25, .5), gamma = c(.1, .25, .5, .9),     
                    iteration = seq(niterations))
 # since child environments inside workers do not inherit R6 objects, source them once per worker
 # thus, need to loop over only a hundred dataframes
-idf_list <- idf %>% group_split(alpha, beta, gamma)
+idf_list <- idf %>% group_split(alpha, beta, gamma, iteration)
 
 if (parallel) {
 # make cluster ----
@@ -61,12 +51,19 @@ pb <- txtProgressBar(0, max = length(idf_list), style = 3)
 
 
 # results <- foreach(j = seq_len(length(idf_list)), .errorhandling = "remove",
-# results <- foreach(j = seq_len(23), .errorhandling = "remove",
+# # results <- foreach(j = seq_len(23), .errorhandling = "remove",
 #                    .packages=c("R6", "tidyverse"), #.export = c("vm_bf", "rbf_set"),
 #                    .combine='rbind') %dopar% {
                      iterate_sim <- function(df, bump_prominence, ncenters, centers, values, width_sd, i, j) {
-                       sanity_checks = F
                        set.seed(df$iteration[i])
+                       ncenters <- 9 # how many gaussians there are
+                       mean_val <- 10 # mean reward rate
+                       sd_val <- 2 # standard deviation of reward / range of rewards
+                       centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
+                       values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
+                       width_sd <- 20 # fixed, how wide are the underlying Gaussians
+                       sanity_checks = F # diagnostic plots inside simulation loop
+                       ntrials = 300
                        cat(sprintf("In loop i: %d, j: %d\n", i, j), file = "run_log.txt", append=T)
                        # set up contingency
                        bump_prominence <- df$bump_prom[i]
@@ -139,7 +136,7 @@ pb <- txtProgressBar(0, max = length(idf_list), style = 3)
                      # suppressMessages(library(pkgs[j], character.only = TRUE))
                      
                      # completely sequential version
-# big_d_list <- list()
+big_d_list <- list()
 for (j in seq(length(idf_list))) {
                      setwd("~/code/clock2")
                      source("code/von_mises_basis.R")
