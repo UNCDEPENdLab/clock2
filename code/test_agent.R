@@ -16,6 +16,7 @@ bump_value <- mean_val * bump_prominence
 bump_center <- sample(seq(0, 360, by = 10), 1, replace = FALSE)
 
 animated_plot <- F
+generate_design_matrix_for_inquisit = TRUE;
 
 # VM version
 # contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights=c(values, bump_value), widths = rep(width_sd, ncenters+1))
@@ -40,13 +41,13 @@ contingency$get_weights()
 
 # used in prolific
 tt <- troll_world$new(n_trials=345, values=contingency$get_wfunc(), drift_sd=0) # set up troll world
-tt$apply_flex(high_avg = 1, high_spread = 0, jump_high=FALSE)
+tt$apply_flex(high_avg = 1, high_spread = 0, jump_high=TRUE)
 tt$setup_erasure_blocks()
 plot(tt$spread) # prominence of bump vs floor over trials, shows switches, bump drifts in Gaussian random walk
 
 # stable 100-trial contingency for model validation
-tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0)
-tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 100, jump_high = FALSE)
+#tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0)
+#tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 100, jump_high = FALSE)
 
 plot(tt$spread)
 
@@ -82,16 +83,85 @@ if (animated_plot) {
     
   }
 }
-  
-inq_val <- round(t(tt$get_values_matrix()),0)
-write.csv(inq_val,file = '2023-09-12-Design-File-asMatrix.csv')
 
-values <- data.frame(round(t(tt$get_values_matrix())),0)
-#values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial")
-values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial") %>%
-  mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
-                                                                           vmax_location = timepoint[which.max(value)])
-plot(values$vmax_location)
+
+if (generate_design_matrix_for_inquisit==TRUE){  
+  #inq_val <- round(t(tt$get_values_matrix()),0)
+  #write.csv(inq_val,file = '2023-09-12-Design-File-asMatrix.csv')
+  inq_tri <- data.frame(t(inq_val))
+  inq_tri <- inq_tri %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = extract_numeric(RT))
+  inq_tri <- inq_tri %>% group_by(trial) %>% mutate(qv = rep(quantile(value,c(.25, .75)),length.out=360), pp = value >= qv[1] & value <= qv[2]) %>% ungroup() %>% select(!qv)
+  
+  nR <- nrow(t(inq_val)) # these will be separate lists
+  nC <- ncol(t(inq_val)) # these will be the items in each list
+  
+  # generate values for erasures, 1 list per trial
+  options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
+  iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) 
+  row_prefix = 'trqv_';
+  df0 <- NULL
+  for (iR in 1:nR){ # start at 1st row
+    df <- inq_tri %>% filter(trial==iR)
+    df <- df %>% filter(pp == TRUE)
+    df <- df %>% filter(!is.na(df$value))
+    nC <- nrow(df)
+    for (iC in 2:nC){ # start at 2, ignore col names
+      if (iC==2){
+        df0 <- paste0('<list ',row_prefix,as.character(iR-1),'>','\n','/ items = ( ',df$value[iC])
+      } else if(iC>2 & iC < nC){
+        df0 <- paste0(df0,', ',df$value[iC])
+      }else if (iC==nC){
+        df0 <- paste0(df0,',',df$value[iC],')','\n','/ selectionrate = trial \n/ selectionmode=values.values_erasure_index;','\n','</list>')
+      }
+    }
+    iqx_formatted_df[iR,1] <- df0 
+  }
+  write.table(iqx_formatted_df,'values_erasure.txt',row.names=F,col.names=F,quote=F)
+  options("encoding" = "native.enc") # change encoding back to native
+  
+  
+  # generate indices for erasures, 1 list per trial
+  options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
+  iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) 
+  row_prefix = 'trqi_'
+  df0 <- NULL
+  for (iR in 1:nR){ # start at 1st row
+    df <- inq_tri %>% filter(trial==iR)
+    df <- df %>% filter(pp == TRUE)
+    df <- df %>% filter(!is.na(df$value))
+    nC <- nrow(df)
+    for (iC in 2:nC){ # start at 2, ignore col names
+      if (iC==2){
+        df0 <- paste0('<list ',row_prefix,as.character(iR-1),'>','\n','/ items = ( ',df$RT[iC])
+      } else if(iC>2 & iC < nC){
+        df0 <- paste0(df0,', ',df$RT[iC])
+      }else if (iC==nC){
+        df0 <- paste0(df0,',',df$RT[iC],')','\n','/ selectionrate = trial \n/ selectionmode=values.degrees_erasure_index;','\n','</list>')
+      }
+    }
+    iqx_formatted_df[iR,1] <- df0 
+  }
+  write.table(iqx_formatted_df,'degrees_erasure.txt',row.names=F,col.names=F,quote=F)
+  options("encoding" = "native.enc") # change encoding back to native
+  
+  # generate conditional to select trial list depending on trial
+  nR <- nrow(t(inq_val)) # these will be separate lists
+  options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
+  iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) # import csv as data frame
+  df0 <- NULL
+  for (iR in 1:nR){
+    
+  }
+  
+  
+  values <- data.frame(round(t(tt$get_values_matrix())),0)
+  #values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial")
+  values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial") %>%
+    mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
+                                                                             vmax_location = timepoint[which.max(value)])
+  plot(values$vmax_location)
+  
+}
 # in progress
 #tt$erase_segment(30, trial=10)
 
