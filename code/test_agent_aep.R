@@ -150,9 +150,17 @@ if (generate_design_matrix_for_inquisit==TRUE){
   iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) # import csv as data frame
   df0 <- NULL
   for (iR in 1:nR){
-    
+    if (iR==1){
+      df0 <- paste0('if (values.trial == ',as.character(iR),'){\nvalues.degrees_erasure_index = rand(1,list.trqv_',as.character(iR),'.itemcount); values.values_erasure_index=values.degrees_erasure_index; values.curr_val_era = list.trqv_',as.character(iR),'.nextvalue; values.curr_index_era = list.trqi_',as.character(iR),'.nextvalue;');
+    } else if (iR > 1 && iR < nR){
+      df0 <- paste0('} else if (values.trial ==',as.character(iR),'){\nvalues.degrees_erasure_index = rand(1,list.trqv_',as.character(iR),'.itemcount); values.values_erasure_index=values.degrees_erasure_index; values.curr_val_era = list.trqv_',as.character(iR),'.nextvalue; values.curr_index_era = list.trqi_',as.character(iR),'.nextvalue;');
+    } else if (iR==nR){
+      df0 <- paste0('} else if (values.trial ==',as.character(iR),'){\nvalues.degrees_erasure_index = rand(1,list.trqv_',as.character(iR),'.itemcount); values.values_erasure_index=values.degrees_erasure_index; values.curr_val_era = list.trqv_',as.character(iR),'.nextvalue; values.curr_index_era = list.trqi_',as.character(iR),'.nextvalue;');
+    }
+    iqx_formatted_df[iR,1] <- df0 
   }
-  
+  write.table(iqx_formatted_df,'erasure_trial.txt',row.names=F,col.names=F,quote=F)
+  options("encoding" = "native.enc") # change encoding back to native
   
   values <- data.frame(round(t(tt$get_values_matrix())),0)
   #values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial")
