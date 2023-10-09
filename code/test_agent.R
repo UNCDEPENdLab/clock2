@@ -1,9 +1,9 @@
-setwd("~/Data_Analysis/clock2")
-#setwd("~/code/clock2")
+library(tidyverse)
+if (sum(stringr::str_detect(Sys.info(), "Alex|alexdombrovski"))>1) {setwd("~/code/clock2/")} else {
+  setwd("~/Data_Analysis/clock2")}
 source("code/von_mises_basis.R")
 source("code/clock2_troll_world.R")
 source("code/scepticc.R")
-library(tidyverse)
 ncenters <- 9 # how many gaussians there are
 mean_val <- 10 # mean reward rate
 sd_val <- 2 # standard deviation of reward / range of rewards
@@ -16,7 +16,6 @@ bump_value <- mean_val * bump_prominence
 bump_center <- sample(seq(0, 360, by = 10), 1, replace = FALSE)
 
 animated_plot <- F
-generate_design_matrix_for_inquisit = TRUE;
 
 # VM version
 # contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights=c(values, bump_value), widths = rep(width_sd, ncenters+1))
@@ -40,16 +39,32 @@ contingency$get_weights()
 
 
 # used in prolific
-tt <- troll_world$new(n_trials=345, values=contingency$get_wfunc(), drift_sd=0) # set up troll world
-tt$apply_flex(high_avg = 1, high_spread = 0, jump_high=TRUE)
-tt$setup_erasure_blocks()
-plot(tt$spread) # prominence of bump vs floor over trials, shows switches, bump drifts in Gaussian random walk
+# tt <- troll_world$new(n_trials=345, values=contingency$get_wfunc(), drift_sd=4) # set up troll world
+# tt$apply_flex(high_avg = 1, high_spread = 0, jump_high=FALSE)
+# tt$setup_erasure_blocks()
+# plot(tt$spread) # prominence of bump vs floor over trials, shows switches, bump drifts in Gaussian random walk
 
 # stable 100-trial contingency for model validation
-#tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0)
-#tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 100, jump_high = FALSE)
-
+tt <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=1)
+tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 100, jump_high = FALSE)
+tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
+sceptic_agent <- scepticc$new(n_basis=12, n_points=360, contingency=tt, beta = 40, epsilon_u = .1)
+df <- sceptic_agent$run_contingency()
+tt$get_choices()
 plot(tt$spread)
+df$h <- sceptic_agent$get_entropy_history()
+u <- tt$get_choices() %>% mutate(u = trial_type=="erasure" & segment_shown)
+df <- df %>% inner_join(u)
+sum(df$in_segment)
+sum(df$u)
+
+ggplot(df) + geom_line( aes(x=trial, y=h*2)) + geom_point(aes(x = trial, y = choice, alpha = outcome)) + 
+  scale_color_viridis_d() + geom_errorbar(aes(x = trial, y = (segment_min + segment_max)/2, ymin = segment_min, ymax = segment_max, color = trial_type)) +
+  theme_minimal()
+cor.test(as.numeric(df$u), df$h)
+
+ggplot(df) + geom_line( aes(x=trial, y=h*50)) + geom_point(aes(x = trial, y = tt$spread, color = outcome)) + 
+  scale_color_viridis_b()
 
 # stable 100-trial contingency for model validation
 # tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0)
@@ -72,7 +87,7 @@ loc <- round(tt$get_pvec(), 2)
 if (animated_plot) {
   
   for (ii in 1:nrow(aa)) {
-    if (tt$erasure_segments$erase_condition[ii] == "erasure") {
+    if (tt$erasure_segments$trial_type[ii] == "erasure") {
       ss <- paste(", er:", round(tt$erasure_segments[ii,"segment_min"], 2))
     } else {
       ss <- ""
@@ -83,85 +98,16 @@ if (animated_plot) {
     
   }
 }
+  
+inq_val <- round(t(tt$get_values_matrix()),0)
+write.csv(inq_val,file = '2023-09-12-Design-File-asMatrix.csv')
 
-
-if (generate_design_matrix_for_inquisit==TRUE){  
-  #inq_val <- round(t(tt$get_values_matrix()),0)
-  #write.csv(inq_val,file = '2023-09-12-Design-File-asMatrix.csv')
-  inq_tri <- data.frame(t(inq_val))
-  inq_tri <- inq_tri %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = extract_numeric(RT))
-  inq_tri <- inq_tri %>% group_by(trial) %>% mutate(qv = rep(quantile(value,c(.25, .75)),length.out=360), pp = value >= qv[1] & value <= qv[2]) %>% ungroup() %>% select(!qv)
-  
-  nR <- nrow(t(inq_val)) # these will be separate lists
-  nC <- ncol(t(inq_val)) # these will be the items in each list
-  
-  # generate values for erasures, 1 list per trial
-  options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
-  iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) 
-  row_prefix = 'trqv_';
-  df0 <- NULL
-  for (iR in 1:nR){ # start at 1st row
-    df <- inq_tri %>% filter(trial==iR)
-    df <- df %>% filter(pp == TRUE)
-    df <- df %>% filter(!is.na(df$value))
-    nC <- nrow(df)
-    for (iC in 2:nC){ # start at 2, ignore col names
-      if (iC==2){
-        df0 <- paste0('<list ',row_prefix,as.character(iR-1),'>','\n','/ items = ( ',df$value[iC])
-      } else if(iC>2 & iC < nC){
-        df0 <- paste0(df0,', ',df$value[iC])
-      }else if (iC==nC){
-        df0 <- paste0(df0,',',df$value[iC],')','\n','/ selectionrate = trial \n/ selectionmode=values.values_erasure_index;','\n','</list>')
-      }
-    }
-    iqx_formatted_df[iR,1] <- df0 
-  }
-  write.table(iqx_formatted_df,'values_erasure.txt',row.names=F,col.names=F,quote=F)
-  options("encoding" = "native.enc") # change encoding back to native
-  
-  
-  # generate indices for erasures, 1 list per trial
-  options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
-  iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) 
-  row_prefix = 'trqi_'
-  df0 <- NULL
-  for (iR in 1:nR){ # start at 1st row
-    df <- inq_tri %>% filter(trial==iR)
-    df <- df %>% filter(pp == TRUE)
-    df <- df %>% filter(!is.na(df$value))
-    nC <- nrow(df)
-    for (iC in 2:nC){ # start at 2, ignore col names
-      if (iC==2){
-        df0 <- paste0('<list ',row_prefix,as.character(iR-1),'>','\n','/ items = ( ',df$RT[iC])
-      } else if(iC>2 & iC < nC){
-        df0 <- paste0(df0,', ',df$RT[iC])
-      }else if (iC==nC){
-        df0 <- paste0(df0,',',df$RT[iC],')','\n','/ selectionrate = trial \n/ selectionmode=values.degrees_erasure_index;','\n','</list>')
-      }
-    }
-    iqx_formatted_df[iR,1] <- df0 
-  }
-  write.table(iqx_formatted_df,'degrees_erasure.txt',row.names=F,col.names=F,quote=F)
-  options("encoding" = "native.enc") # change encoding back to native
-  
-  # generate conditional to select trial list depending on trial
-  nR <- nrow(t(inq_val)) # these will be separate lists
-  options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
-  iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) # import csv as data frame
-  df0 <- NULL
-  for (iR in 1:nR){
-    
-  }
-  
-  
-  values <- data.frame(round(t(tt$get_values_matrix())),0)
-  #values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial")
-  values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial") %>%
-    mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
-                                                                             vmax_location = timepoint[which.max(value)])
-  plot(values$vmax_location)
-  
-}
+values <- data.frame(round(t(tt$get_values_matrix())),0)
+#values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial")
+values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial") %>%
+  mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
+                                                                           vmax_location = timepoint[which.max(value)])
+plot(values$vmax_location)
 # in progress
 #tt$erase_segment(30, trial=10)
 
@@ -182,7 +128,7 @@ if (generate_design_matrix_for_inquisit==TRUE){
 tt <- troll_world$new(n_trials=100, values=contingency$get_wfunc(), drift_sd=0)
 #plot(tt$spread)
 tt$apply_flex(high_avg = 1, high_spread = 0, jump_high=FALSE)
-tt$setup_erasure_blocks(timeout_trials = 1)
+tt$setup_erasure_blocks(timeout_trials = 4)
 plot(tt$get_starting_values())
 tt$reset_counter()
 # aa <- tt$get_values_matrix("original", quiet=F) # original values (should be constant over trials)
@@ -197,6 +143,13 @@ aa <- tt$get_values_matrix("objective", quiet=F) # all manipulations
 
 ## try out sceptic agent
 sceptic_agent <- scepticc$new(n_basis=12, n_points=360, contingency=tt)
+sceptic_agent$beta <- 5
+learning_history <- sceptic_agent$run_contingency(optimize = FALSE)
+world <- sceptic_agent$get_contingency()
+df <- world$get_choices()
+world$erasure_segments
+
+
 #sceptic_agent$update_weights(tau=pi/2, outcome=100)
 # sceptic_agent$emit_choice()
 #plot(sceptic_agent$get_choice_probs(), type="l")

@@ -68,7 +68,7 @@ troll_world <- R6::R6Class(
       
       has_drift <- abs(private$pvt_drift_sd) > 1e-5
       has_flex <- !is.null(self$spread)
-      has_jump <- !is.null(private$pvt_jump_vec)
+      has_jump <- sum(abs(private$pvt_jump_vec) > 0)
 
       if (has_drift) {
         # use sweep for efficient addition of a vector to each row
@@ -188,6 +188,9 @@ troll_world <- R6::R6Class(
       
       # since circle wraps, we want to avoid adding a redundant basis function at 0 vs. at 2*pi
       private$pvt_pvec <- seq(0, max_val - d_theta, by=d_theta)
+      
+      # populate 0 jump vector if there are no jumps or apply_flex has not been run
+      private$pvt_jump_vec <- rep(0, private$pvt_n_trials)
 
       if (!is.null(drift_sd)) {
         checkmate::assert_integerish(drift_sd, lower=0, len=1L)
@@ -448,31 +451,29 @@ troll_world <- R6::R6Class(
       self$spread <- spread[1:private$pvt_n_trials]
       self$epoch <- epoch[1:private$pvt_n_trials]
 
-      # handle the jump of location during high entropy periods
+      # handle the jump of location during high entropy periods -- overrides default 0 jump vector
       if (isTRUE(jump_high)) {
         high_pos <- which(dplyr::lag(self$epoch) != self$epoch & self$epoch == "high")
         n_jumps <- length(high_pos)
         jv <- rep(0, private$pvt_n_trials)
         jv[high_pos] <- (-1)^sample(1:2, n_jumps, replace=TRUE) * sample(seq(90, 180, by = 10), size = n_jumps, replace=TRUE)
         private$pvt_jump_vec <- cumsum(jv) # use cumsum to allow vectorized shifts of value matrix
-      } else {
-        # populate 0 jump vector
-        private$pvt_jump_vec <- rep(0, private$pvt_n_trials)
       }
-
+      
       # need to regenerate values when requested
       private$pvt_clean <- FALSE
     },
     
     #' @description rescale a vector to have a given 2*spread range around the mean and a designated mean
     v_rescale = function(x, spread = 20, mean_val=50, force_min = 1) {
+      checkmate::assert_number(force_min, lower=0)
       #mx <- mean(x)
       y <- scales::rescale(x, to = c(mean_val - spread, mean_val + spread))
       adjust <- mean_val - mean(y)
       y <- y + adjust
       
       # if we want to force a given minimum to hold, apply it here (can undermine the mean)
-      if (isTRUE(force_min)) y <- y - (min(y) - force_min)
+      if (force_min > 0) y <- y - (min(y) - force_min)
       return(y)
     },
     
@@ -489,12 +490,15 @@ troll_world <- R6::R6Class(
     get_cur_segment = function() {
       as.list(self$erasure_segments[self$cur_trial,])
     },
-    harvest = function(choice) {
+    harvest = function(choice, choose_erasure = TRUE) {
       v <- self$get_cur_values()
       s <- self$get_cur_segment()
       
       # computationally expensive location of the closest matching position to choice
       pos <- which.min(abs(choice - private$pvt_pvec))
+      
+      # force lots of sampling to sort out bugs
+      # if (runif(1) < .9) choice <- s$segment_min + 0.05
       
       # test whether choice is in the current erasure/attention segment. Will be FALSE if no segment
       in_seg <- private$seg_test(choice, s$segment_min, s$segment_max)
@@ -517,27 +521,32 @@ troll_world <- R6::R6Class(
           self$erasure_segments$trial_type[self$cur_trial] == self$erasure_segments$trial_type[self$cur_trial + 1]) {
         
         generate_new_erasure <- FALSE
+        clicks_remain <- self$erasure_segments$clicks_remain[self$cur_trial] # how many clicks remain as of this trial
+        timeouts_remain <- self$erasure_segments$timeouts_remain[self$cur_trial] # how many timeouts remain as of this trial
+        block_end <- private$get_block_end()
+        
+        # small bug in logic here. The last trial in each block will not be decremented as expected because the opening
+        # if block has the cur trial type = trial type + 1. Leaving the bug for now since it doesn't affect dynamics
+        # decrement timeouts_remain if we have already hit clicks_remain == 0
+        if (!is.na(timeouts_remain) && clicks_remain == 0L) {
+          self$erasure_segments$timeouts_remain[(self$cur_trial):block_end] <- timeouts_remain - 1
+          
+          # if the timeouts have elapsed, sample new erasure
+          if (timeouts_remain - 1 == 0) generate_new_erasure <- TRUE
+        }
         
         # if person clicks in segment, we should decrement the clicks that remain and potentially resample an erasure if we hit 0
         if (in_seg) {
           # this needs to fire after timeouts collapse, even if they click outside segment
-          if (self$erasure_segments$clicks_remain[self$cur_trial] <= 1 && self$erasure_segments$timeouts_remain[self$cur_trial] == 0) {
+          if (clicks_remain <= 1 && timeouts_remain == 0) {
             # if this was the last click before the segment disappears and there is no timeout, erase a new segment
             generate_new_erasure <- TRUE
-          } else if (self$erasure_segments$clicks_remain[self$cur_trial] > 0) {
+          } else if (clicks_remain > 0) {
             # decrement clicks remain
-            self$erasure_segments$clicks_remain[(self$cur_trial + 1):private$get_block_end()] <- self$erasure_segments$clicks_remain[self$cur_trial] - 1
-          }
-        } else if (!is.na(self$erasure_segments$timeouts_remain[self$cur_trial]) && self$erasure_segments$clicks_remain[self$cur_trial] == 0L) {
-          #turn off segment display
-          self$erasure_segments$segment_shown[(self$cur_trial + 1):private$get_block_end()] <- FALSE
-          
-          # decrement timeouts_remain if we have already hit clicks_remain == 0
-          if (self$erasure_segments$timeouts_remain[self$cur_trial] > 0) {
-            self$erasure_segments$timeouts_remain[(self$cur_trial + 1):private$get_block_end()] <- self$erasure_segments$timeouts_remain[self$cur_trial] - 1
-          } else if (self$erasure_segments$timeouts_remain[self$cur_trial] == 0) {
-            # if the timeouts have elapsed, sample new erasure
-            generate_new_erasure <- TRUE
+            self$erasure_segments$clicks_remain[(self$cur_trial + 1):block_end] <- clicks_remain - 1
+            
+            # if we've made the last click, turn off segment display
+            if (clicks_remain - 1 == 0) self$erasure_segments$segment_shown[(self$cur_trial + 1):block_end] <- FALSE
           }
         }
         

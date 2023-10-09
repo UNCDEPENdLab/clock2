@@ -6,6 +6,8 @@ scepticc <- R6::R6Class(
     pvt_alpha = 0.1,
     pvt_gamma = 0.3,
     pvt_beta = 2,
+    pvt_epsilon_u = 0.0833, # uncertainty attitude -- probability of choosing erased segment (prior at chance)
+    pvt_epsilon_a = 0.0833, # attention attitude -- probability of choosing attention segment
     pvt_n_points = 50,
     pvt_model = "decay", # what variant of sceptic to run
     pvt_history = NULL,
@@ -38,37 +40,47 @@ scepticc <- R6::R6Class(
         checkmate::assert_number(v, lower=0.001, upper=1e4)
         private$pvt_beta <- v
       }
+    },
+    epsilon_u = function(v) {
+      if (missing(v)) {
+        return(private$pvt_epsilon_u)
+      } else {
+        checkmate::assert_number(v, lower=0, upper=1)
+        private$pvt_epsilon_u <- v
+      }
     }
+    
   ),
   public = list(
     initialize = function(n_basis = 12, n_points = NULL, basis_sd = 0.3, weights_0 = 0, elig_sd = 0.3, 
-                          alpha=NULL, gamma=NULL, beta=NULL, contingency=NULL, data = NULL, seed=NULL) {
+                          alpha=NULL, gamma=NULL, beta=NULL, epsilon_u = NULL, contingency=NULL, data = NULL, seed=NULL) {
       checkmate::assert_number(n_basis, lower=2)
       if (checkmate::test_number(weights_0)) weights_0 <- rep(weights_0, n_basis)
       if (checkmate::test_number(basis_sd)) basis_sd <- rep(basis_sd, n_basis)
       stopifnot(length(weights_0) == n_basis)
       stopifnot(length(basis_sd) == n_basis)
-
+      
       if (!is.null(n_points)) {
         checkmate::assert_number(n_points, lower=2)
         private$pvt_n_points <- n_points
       }
-
+      
       # setup positions
       d_theta <- (2*pi)/n_basis
-
+      
       # since circle wraps, we want to avoid adding a redundant basis function at 0 vs. at 2*pi
       loc <- seq(0, 2*pi - d_theta, by=d_theta)
       vset <- lapply(seq_along(loc), function(ii) {
         vm_bf$new(n_points = private$pvt_n_points, center=loc[ii], width_sd=basis_sd[ii], weight=weights_0[ii])
       })
-
+      
       private$pvt_bf_set <- rbf_set$new(elements=vset)
       private$pvt_eligibility <- vm_bf$new(n_points = private$pvt_n_points, center=0, width_sd=elig_sd, weight=1)
-
+      
       if (!is.null(alpha)) self$alpha <- alpha
       if (!is.null(beta)) self$beta <- beta
       if (!is.null(gamma)) self$gamma <- gamma
+      if (!is.null(epsilon_u)) self$epsilon_u <- epsilon_u
       
       checkmate::assert_false(!is.null(contingency) & !is.null(data))
       if (!is.null(contingency)) {
@@ -81,7 +93,7 @@ scepticc <- R6::R6Class(
         private$pvt_data <- data # assign by reference -- will update original object
       }
       
-
+      
       if (!is.null(seed)) {
         checkmate::assert_integerish(seed, lower = 1, len = 1L)
         private$pvt_seed <- seed
@@ -102,7 +114,7 @@ scepticc <- R6::R6Class(
       } else {
         decay <- 0
       }
-
+      
       w_new <- w + self$alpha*e*pe + decay
       private$pvt_bf_set$set_weights(w_new)
       private$pvt_history[[private$pvt_sample]] <- w_new
@@ -121,7 +133,13 @@ scepticc <- R6::R6Class(
       }
       return(h)
     },
-    
+    get_uncertainty_history = function() {
+      #...
+      for (t in seq_len(nrow(wnorm))) {
+        u[t] <- -sum(wnorm[t,]*log2(wnorm[t,]))
+      }
+      return(u)
+    },
     get_func_history = function() {
       tmp_bf <- private$pvt_bf_set$clone(deep=TRUE)
       h <- self$get_weight_history()
@@ -138,7 +156,7 @@ scepticc <- R6::R6Class(
     get_choice_probs = function(model="sceptic") {
       #v=x_t(1:nbasis)*ones(1,ntimesteps) .* gaussmat; %use vector outer product to replicate weight vector
       #v_func = sum(v); %subjective value by timestep as a sum of all basis functions
-
+      
       if (model == "sceptic") {
         v_func <- private$pvt_bf_set$get_wfunc()
         p_choice <- (exp((v_func - max(v_func)) / private$pvt_beta)) / (sum(exp((v_func - max(v_func)) / private$pvt_beta))) # Divide by temperature
@@ -146,15 +164,19 @@ scepticc <- R6::R6Class(
         n_t <- length(private$pvt_bf_set$get_pvec())
         p_choice <- rep(1 /n_t, n_t)
       }
-
+      
       return(p_choice)
     },
     emit_choice = function() {
       # sample choice based on softmax probabilities
       # print(private$pvt_bf_set$get_wfunc())
       # lookup choice against positions in radians
-      s <- sample(seq_len(private$pvt_n_points), 1, prob = self$get_choice_probs())
-      return(private$pvt_eligibility$get_pvec()[s])
+      seg <- private$pvt_contingency$get_cur_segment()
+      if (seg$trial_type=="erasure" & runif(1, 0, 1) < private$pvt_epsilon_u) {
+        # simply sample the middle half of the erased segment; 
+        return(seg$segment_min + runif(1, pi/24, pi/9))} else {
+          s <- sample(seq_len(private$pvt_n_points), 1, prob = self$get_choice_probs())
+          return(private$pvt_eligibility$get_pvec()[s])}
     },
     run_contingency = function(pvec=NULL, optimize=FALSE) {
       if (is.null(private$pvt_contingency)) {
@@ -162,11 +184,18 @@ scepticc <- R6::R6Class(
       }
       
       if (!is.null(pvec)) {
-        private$pvt_alpha <- pvec["alpha"]
-        private$pvt_beta <- pvec["beta"]
-        private$pvt_gamma <- pvec["gamma"]
+        if (!is.na(pvec["alpha"])) private$pvt_alpha <- pvec["alpha"]
+        if (!is.na(pvec["beta"])) private$pvt_beta <- pvec["beta"]
+        if (!is.na(pvec["gamma"])) private$pvt_gamma <- pvec["gamma"]
+        if (!is.na(pvec["epsilon_u"])) private$pvt_epsilon_u <- pvec["epsilon_u"]
+        if (!is.na(pvec["epsilon_a"])) private$pvt_epsilon_a <- pvec["epsilon_a"]
       }
 
+      # p <- runif(1)
+      # if (p < epsilon) {
+      #   s  <- private$pvt_contingency$get_current_se
+      # }
+      
       n_trials <- private$pvt_contingency$get_n_trials()
       
       private$pvt_contingency$reset_counter()
@@ -241,6 +270,6 @@ scepticc <- R6::R6Class(
       private$pvt_contingency
     }
     
-
+    
   )
 )
