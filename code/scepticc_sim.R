@@ -16,19 +16,37 @@ library(doFuture)
 plan(multisession)
 require(utils)
 
-parallel = F
 
 # set up basic contingency
-niterations = 100 # aiming for 100
+# niterations = 100 # aiming for 100
 # prepare input df, starting on a coarse grid
-idf <- expand.grid(alpha = c(.05, .1, .25, .5), gamma = c(.1, .25, .5, .9),                 # model params
-                   beta = c(1, 5, 20, 40), epsilon_u = c(0.01, 0.0833, 0.33, 0.99), # 0.0833 is at chance
-                   low_avg = seq(10, 50, 10),                                               # design vars
-                   block_length = c(10, 20, 30), drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
-                   iteration = seq(niterations))
+# idf <- expand.grid(alpha = c(.1, .25, .5), gamma = c(.1, .5, .9),                 # model params
+#                    beta = c(1, 5), # at very high betas, h and u are decorrelated, no need to test
+#                    epsilon_u = c(0.33, 0.99), # 0.0833 is at chance, low correlation -- not worth testing
+#                    low_avg = c(10, 20), # higher was generally worse                    # design vars
+#                    block_length = c(10), # block length > 15 had higher correlations, not worth testing
+#                    #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
+#                    iteration = 10:niterations)
+
+
+# find more good seeds for contingencies
+rob_grid <- expand.grid(alpha = c(.5), gamma = c(.5),                 # model params
+                        beta = c(1), # at very high betas, h and u are decorrelated, no need to test
+                        epsilon_u = c(0.99), # 0.0833 is at chance, low correlation -- not worth testing
+                        block_length = c(10), # block length > 15 had higher correlations, not worth testing
+                        low_avg = c(10, 20),
+                        iteration = c(223:1223),
+                        #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
+                        seed = 1:100)
+
 # since child environments inside workers do not inherit R6 objects, source them once per worker
 # thus, need to loop over only a hundred dataframes
-idf_list <- idf %>% group_split(alpha, beta, gamma, iteration)
+# idf_list <- idf %>% group_split(iteration, alpha)
+# idf_list <- cross_join(winners, rob_grid) %>% group_split(seed, epsilon_u, iteration)
+
+idf_list <- rob_grid %>% group_split(iteration, low_avg)
+setwd("../simulations/")
+for (f in 1:length(idf_list)) {data.table::fwrite(idf[[f]], file = paste0("grid_", j, ".csv"))}
 
 if (parallel) {
 # make cluster ----
@@ -46,14 +64,15 @@ parallel::clusterExport(cl, setdiff(ls(), "cl"))
 # loop over parameters ----
 message("Running simulation")
 # registerDoSEQ()
-}
 pb <- txtProgressBar(0, max = length(idf_list), style = 3)
+
+}
 
 
 # results <- foreach(j = seq_len(length(idf_list)), .errorhandling = "remove",
 # # results <- foreach(j = seq_len(23), .errorhandling = "remove",
-#                    .packages=c("R6", "tidyverse"), #.export = c("vm_bf", "rbf_set"),
-#                    .combine='rbind') %dopar% {
+                   # .packages=c("R6", "tidyverse"), #.export = c("vm_bf", "rbf_set"),
+                   # .combine='rbind') %dopar% {
                      iterate_sim <- function(df, bump_prominence, ncenters, centers, values, width_sd, i, j) {
                        set.seed(df$iteration[i])
                        ncenters <- 9 # how many gaussians there are
@@ -66,7 +85,7 @@ pb <- txtProgressBar(0, max = length(idf_list), style = 3)
                        ntrials = 300
                        cat(sprintf("In loop i: %d, j: %d\n", i, j), file = "run_log.txt", append=T)
                        # set up contingency
-                       bump_prominence <- df$bump_prom[i]
+                       bump_prominence <- 10
                        bump_value <- mean_val * bump_prominence
                        bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
                        contingency <- tryCatch(vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians"),
@@ -75,7 +94,7 @@ pb <- txtProgressBar(0, max = length(idf_list), style = 3)
                                                  save.image(file=sprintf("contingency_error_state_%d_%d.RData", i, j))
                                                  return(NULL)
                                                })
-                       tt <- tryCatch(troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=df$drift[i]),
+                       tt <- tryCatch(troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=1),
                                       error = function(e) {
                                         print(e)
                                         save.image(file=sprintf("troll_world_error_state_%d_%d.RData", i, j))
@@ -87,7 +106,7 @@ pb <- txtProgressBar(0, max = length(idf_list), style = 3)
                                   save.image(file=sprintf("flex_error_state_%d_%d.RData", i, j))
                                   return(NULL)
                                 })
-                       tryCatch(tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1),
+                       tryCatch(tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1, block_length = df$block_length[i]),
                                 error = function(e) {
                                   print(e)
                                   save.image(file=sprintf("erasure_error_state_%d_%d.RData", i, j))
@@ -100,6 +119,8 @@ pb <- txtProgressBar(0, max = length(idf_list), style = 3)
                        sceptic_agent$beta <- beta <- df$beta[i]
                        sceptic_agent$gamma <- gamma <- df$gamma[i]
                        sceptic_agent$epsilon_u <- epsilon_u <- df$epsilon_u[i]
+                       # new seed for the agent from teh expanded set
+                       set.seed(df$seed[i])
                        learning_history <- tryCatch(sceptic_agent$run_contingency(optimize = FALSE),
                                                     error = function(e) {
                                                       print(e)
@@ -123,9 +144,9 @@ pb <- txtProgressBar(0, max = length(idf_list), style = 3)
                        #     scale_color_viridis_b()
                        # } # for debugging only
                        r <- cor(d$h, d$u, use = "complete.obs", method = "spearman")
-                       u_sampled <- sum(d$in_segment)
+                       # u_sampled <- sum(d$in_segment)
                        # browser()
-                       results <- as.data.frame(cbind(df[i,], r, u_sampled))
+                       results <- as.data.frame(cbind(df[i,], r))
                        return(results)
                        # df$tt[i] <- tt # for now, don't save the actual contingency
                      }
@@ -146,26 +167,104 @@ for (j in seq(length(idf_list))) {
                      # df$r <- NA
                      # df$u_sampled <- NA
                      d_list <- list()
+                     print(paste0(round(j/length(idf_list)*100, 1), ' %'))
                      # for (i in seq_len(nrow(df))) {
                      for(i in seq(nrow(df))) {
-                     # for(i in 1:33) {
-                       d <- iterate_sim(df, bump_prominence, ncenters, centers, values, width_sd, i, j)
+                       d <- tryCatch(suppressMessages(iterate_sim(df, bump_prominence, ncenters, centers, values, width_sd, i, j)),
+                                error = function(e) {
+                                  print(e)
+                                  save.image(file=sprintf("erasure_error_state_%d_%d.RData", i, j))
+                                  return(NULL)
+                                })
+                       if (is.null(d)) {
+                         print(paste0("Bad seed, low_avg=", df$low_avg[i], " iteration =", df$iteration[i],
+                                      " seed=", df$seed[i]))
+                         break}
                        d_list[[i]] <- d
                      }
                      big_d_list[[j]] <- data.table::rbindlist(d_list)
                      setwd("~/code/clock2/simulations")
-                     data.table::fwrite(data.table::rbindlist(d_list), file = paste0(j, ".csv"))
-                     {setTxtProgressBar(pb, j)} # update progress bar
-                     return(data.table::rbindlist(d_list))
+                     data.table::fwrite(data.table::rbindlist(d_list), file = paste0(j, "robust.csv"))
+                     # {setTxtProgressBar(pb, j)} # update progress bar
+                     # return(data.table::rbindlist(d_list))
                    }
 
 
 big_df <- data.table::rbindlist(big_d_list)
+data.table::fwrite(data.table::rbindlist(d_list), file = paste0("10_oct_2023_results_new_seeds.csv"))
 
-stopCluster(cl)
+# stopCluster(cl)
 
 
 # examine results
-df <- results
-ggplot(df, aes(as.factor(low_avg), r, color = as.factor(alpha))) + geom_boxplot() + facet_wrap(~drift)
+df <- big_df
+df %>% summarise(.by = c(low_avg, epsilon_u, iteration), mean_r = mean(r)) %>% arrange(mean_r)
+
+
+sdf <- df %>% summarise(.by = c(low_avg, epsilon_u, iteration), mean_r = mean(r)) %>% arrange(mean_r)
+
+# best low_avg, iterations
+df %>% summarise(.by = c(low_avg, iteration), mean_r = mean(r)) %>% arrange(mean_r) %>% top_n(-20)
+
+idf <- df %>% summarise(.by = c(low_avg, iteration), mean_r = mean(r)) %>% arrange(mean_r) %>% top_n(-20)
+
+# best low_avg, iterations for worst-case scenario (low beta, gamma > .1, epsilon_u = .99)
+wdf <- df %>% filter(beta == 1 & gamma > .1 & epsilon_u == .99) %>% 
+  summarise(.by = c(low_avg, iteration, gamma), mean_r_worst = mean(r)) %>% arrange(mean_r_worst) %>% top_n(-20) %>% inner_join(idf)
+write_csv2(wdf, file = "winning_6_lowavg_seed_robust.csv")
+
+
+
+winners <- wdf %>% select(low_avg, iteration)
+write_csv2(winners, file = "winning_6_lowavg_seed.csv")
+
+
+pdf("simulations_plot_worst.pdf", height = 20, width = 20)
+ggplot(df, aes(low_avg, r, color = as.factor(iteration), lty = as.factor(block_length))) + geom_line() + facet_grid(alpha + gamma ~ epsilon_u + beta)
+dev.off()
+
+pdf("sim_90_iterations.pdf", height = 10, width = 50)
+ggplot(sdf, aes(as.factor(iteration), mean_r, color = as.factor(epsilon_u), lty = as.factor(low_avg))) + geom_boxplot() #+ theme(legend.position = "none")
+dev.off()
+ggplot(df, aes(low_avg, r, color = as.factor(iteration))) + geom_smooth(method = "loess")
+
+pdf("simulations_jitter_worst.pdf", height = 20, width = 20)
+ggplot(df, aes(low_avg, r, color = as.factor(iteration), pch = as.factor(block_length))) + geom_jitter() + 
+  facet_grid(alpha + gamma ~ epsilon_u + beta) + geom_hline(yintercept = 0, size = 1) + geom_hline(yintercept = 0.25, size = .5) + geom_hline(yintercept = 0.5, size = .25)
+dev.off()
+
+ggplot(df, aes(as.factor(low_avg), r, color = as.factor(iteration), lty = as.factor(block_length))) + geom_violin(draw_quantiles = .5)
+
+
+ggplot(df, aes(as.factor(low_avg), r, color = as.factor(block_length))) + geom_boxplot() #+ facet_wrap(~drift)
+ggplot(df, aes(as.factor(block_length), r, color = as.factor(alpha))) + geom_boxplot() + facet_wrap(~as.factor(gamma))
+ggplot(df, aes(as.factor(block_length), r, color = as.factor(alpha))) + geom_boxplot() + facet_wrap(~as.factor(beta))
+ggplot(df, aes(as.factor(bump_prom), r, color = as.factor(alpha))) + geom_boxplot() #+ facet_wrap(~drift)
+
+
 ggplot(df, aes(low_avg, r)) + geom_jitter()  
+
+# focus on problematic behaviors, worst-case scenario: block_length of 10-15 and low_avg 10-20 is still best
+df <- big_df %>% filter(epsilon_u > 0.8 & beta < 20 & alpha <.2)
+
+m0 <- lme4::lmer(r ~  (1|iteration), df)
+summary(m0)
+
+
+m1 <- lme4::lmer(r ~ (as.factor(low_avg) + epsilon_u + beta + gamma)^2 + (1|iteration), df)
+car::Anova(m1, '3')
+summary(m1)
+
+lm1 <- lm(r ~ (as.factor(low_avg) + epsilon_u + alpha + beta + gamma + as.factor(iteration))^2, df)
+anova(lm1)
+summary(lm1)
+
+# look at only the highest epsilon_u
+lm2 <- lm(r ~ (as.factor(block_length) + as.factor(low_avg) + beta + gamma + as.factor(iteration))^2, df)
+anova(lm2)
+summary(lm2)
+
+lm3 <- lm(r ~ (as.factor(block_length) + as.factor(low_avg) + as.factor(iteration)), df)
+anova(lm3)
+summary(lm3)
+
