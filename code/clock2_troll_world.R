@@ -346,7 +346,7 @@ troll_world <- R6::R6Class(
       possible_lengths <- block_length - 0:5
       
       rem <- (private$pvt_n_trials / possible_lengths) %% div
-      
+
       best <- which.min(rem)
       # if a length other than what specified is best, notify user
       if (best != 1) {
