@@ -337,7 +337,7 @@ troll_world <- R6::R6Class(
       checkmate::assert_number(attention_prop, lower = 0, upper = 1)
       stopifnot(erase_prop + attention_prop <= 1)
       no_erasure_prop <- 1 - erase_prop - attention_prop
-      
+
       div <- ifelse(erase_prop > 0 && attention_prop > 0, 3, 2)
       
       # allow for blocks to be shortened by up to 5 trials to reduce get proportions right
@@ -377,7 +377,7 @@ troll_world <- R6::R6Class(
         #   conditions <- c(conditions, "attention")
         #   probs <- c(probs, attention_prop)
         # }
-        
+
         cvec <- c(rep("erasure", erase_blocks), rep("attention", attention_blocks), rep("no erasure", no_blocks))
         
         # this is flawed since we have no assurance that the empirical frequencies are close to the target
@@ -417,7 +417,7 @@ troll_world <- R6::R6Class(
       t_counter <- 1 # how many trials have we generated
       spread <- rep(NA, private$pvt_n_trials)
       epoch <- rep(NA_character_, private$pvt_n_trials)
-      while (t_counter < private$pvt_n_trials) {
+      while (t_counter <= private$pvt_n_trials) {
         # for now, always start with low entropy
         # low entropy period
         low_duration <- low_avg + sample(-low_spread:low_spread, 1)
@@ -459,19 +459,23 @@ troll_world <- R6::R6Class(
         jv[high_pos] <- (-1)^sample(1:2, n_jumps, replace=TRUE) * sample(seq(90, 180, by = 10), size = n_jumps, replace=TRUE)
         private$pvt_jump_vec <- cumsum(jv) # use cumsum to allow vectorized shifts of value matrix
       }
-      
+
       # need to regenerate values when requested
       private$pvt_clean <- FALSE
     },
-    
+
     #' @description rescale a vector to have a given 2*spread range around the mean and a designated mean
     v_rescale = function(x, spread = 20, mean_val=50, force_min = 1) {
       checkmate::assert_number(force_min, lower=0)
-      #mx <- mean(x)
-      y <- scales::rescale(x, to = c(mean_val - spread, mean_val + spread))
+      # mx <- mean(x)
+      l <- mean_val - spread
+      h <- mean_val + spread
+      if (is.na(l) || is.na(h)) warning("Missing rescale values")
+      if (abs(l - h) < 1e-3) warning("Low and high rescale values do not differ")
+      y <- scales::rescale(x, to = c(l, h))
       adjust <- mean_val - mean(y)
       y <- y + adjust
-      
+
       # if we want to force a given minimum to hold, apply it here (can undermine the mean)
       if (force_min > 0) y <- y - (min(y) - force_min)
       return(y)
