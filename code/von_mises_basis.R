@@ -11,7 +11,7 @@ vm_bf <- R6::R6Class(
     pvt_basis_weight_vec = NULL,
 
     # add fast C++ version of the von Mises basis setup
-    vm_cpp = Rcpp::cppFunction(code = readLines("code/vm_bf.cpp"), rebuild=FALSE, cacheDir=rcpp_cache_dir, depends = c("RcppArmadillo")),
+    vm_cpp = Rcpp::cppFunction(code = readLines("vm_bf.cpp"), rebuild=FALSE, cacheDir=rcpp_cache_dir, depends = c("RcppArmadillo")),
 
     # cpp version of setup
     setup_bvals = function() {
