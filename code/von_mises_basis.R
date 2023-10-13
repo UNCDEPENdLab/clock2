@@ -1,4 +1,5 @@
 if (!exists("rcpp_cache_dir")) rcpp_cache_dir <- "~/Rcpp_cache"
+if (!exists("rcpp_source_dir")) rcpp_source_dir <- "~/Data_Analysis/clock2/code/cpp"
 
 # von mises basis function class
 vm_bf <- R6::R6Class(
@@ -11,7 +12,7 @@ vm_bf <- R6::R6Class(
     pvt_basis_weight_vec = NULL,
 
     # add fast C++ version of the von Mises basis setup
-    vm_cpp = Rcpp::cppFunction(code = readLines("vm_bf.cpp"), rebuild=FALSE, cacheDir=rcpp_cache_dir, depends = c("RcppArmadillo")),
+    vm_cpp = Rcpp::cppFunction(code = readLines(file.path(rcpp_source_dir, "vm_bf.cpp")), rebuild=FALSE, cacheDir=rcpp_cache_dir, depends = c("RcppArmadillo")),
 
     # cpp version of setup
     setup_bvals = function() {
@@ -181,7 +182,7 @@ rbf_set <- R6::R6Class(
     units="radians",
 
     # add fast C++ version of the von Mises basis setup
-    compute_overlap = Rcpp::cppFunction(code = readLines("code/compute_overlap.cpp"), rebuild = FALSE, cacheDir = rcpp_cache_dir)
+    compute_overlap = Rcpp::cppFunction(code = readLines(file.path(rcpp_source_dir, "compute_overlap.cpp")), rebuild = FALSE, cacheDir = rcpp_cache_dir)
   ),
   public = list(
     elements = list(),

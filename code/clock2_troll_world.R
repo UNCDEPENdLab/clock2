@@ -1,3 +1,6 @@
+if (!exists("rcpp_cache_dir")) rcpp_cache_dir <- "~/Rcpp_cache"
+if (!exists("rcpp_source_dir")) rcpp_source_dir <- "~/Data_Analysis/clock2/code/cpp"
+
 troll_world <- R6::R6Class(
   "troll_world",
   private = list(
@@ -14,12 +17,12 @@ troll_world <- R6::R6Class(
     pvt_choices = NULL,            # data.frame containing history of choices made by sampling agent
     pvt_pvec = NULL,               # position of values around circle in units of measurement (radians)
     pvt_has_erasures = FALSE,      # whether this world has erasure dynamics
-    
+
     # private methods
     # determine end of current erasure condition/block
     get_block_end = function(trial=NULL) {
       if (is.null(trial)) trial <- self$cur_trial
-      
+
       # show segment -- populate design file
       switch_pos <- which(self$erase_condition[(trial+1):private$pvt_n_trials] != self$erase_condition[trial])[1] - 1
       if (is.na(switch_pos)) {
@@ -52,20 +55,16 @@ troll_world <- R6::R6Class(
       in_range <- ifelse(to_min_ccw + to_max_cw - seg_width_cw < 1e-6, TRUE, FALSE)
       return(in_range)
     },
-    
+
     # helper to shift a vector x circularly by a number of positions delta
     # positive values shift the vector left (early values wrap to the end)
     # negative values shift the vector right (late values wrap to the beginning)
-    shift_vec = function(x, delta) {
-      N <- length(x)
-      delta <- delta %% N # wrap around if shift is larger than length
-      if (delta == 0L) x else c(tail(x, -delta), head(x, delta))
-    },
+    shift_vec = Rcpp::cppFunction(code = readLines(file.path(rcpp_source_dir, "shift_vec.cpp")), rebuild=FALSE, cacheDir=rcpp_cache_dir),
     
     # internal function to calculate drifting and flexed values
     calculate_values = function() {
       if (isTRUE(private$pvt_clean)) return(invisible(NULL))
-      
+
       has_drift <- abs(private$pvt_drift_sd) > 1e-5
       has_flex <- !is.null(self$spread)
       has_jump <- sum(abs(private$pvt_jump_vec) > 0)
@@ -253,17 +252,17 @@ troll_world <- R6::R6Class(
         wrap <- FALSE
         erase_indices <- low_pos:high_pos
       }
-      
+
       # erase segment with NAs
       v_new[erase_indices] <- NA
-      
+
       # find the value for the midpoint of the erasure based on the eligible quantiles
       v_qs <- quantile(v, self$erasure_elig_v_qs)
       v_elig <- v[v > v_qs[1L] & v < v_qs[2L] ]
       v_point <- sample(v_elig, 1) # sample only from eligible quantiles
       # place this value sample/point at the mid-point location for interpolation
       v_new[mid_pos] <- v_point
-      
+
       # use cubic spline interpolation to connect the dots
       if (wrap) {
         # for spline interpolation, we need to put erasure away from boundaries since na.spline doesn't think circularly
@@ -339,12 +338,12 @@ troll_world <- R6::R6Class(
       no_erasure_prop <- 1 - erase_prop - attention_prop
 
       div <- ifelse(erase_prop > 0 && attention_prop > 0, 3, 2)
-      
+
       # allow for blocks to be shortened by up to 5 trials to reduce get proportions right
       # this logic is a bit flawed since if the attention and erasure props diverge a lot, we
       # need something more like the the GCF to determine number of blocks
       possible_lengths <- block_length - 0:5
-      
+
       rem <- (private$pvt_n_trials / possible_lengths) %% div
 
       best <- which.min(rem)
@@ -353,7 +352,7 @@ troll_world <- R6::R6Class(
         block_length <- block_length - best + 1 # +1 to handle 0 in the first position
         message(sprintf("Adjusting block_length to %d to better balance phases", block_length))
       }
-      
+
       n_blocks <- floor(private$pvt_n_trials / block_length)
       erase_blocks <- round(erase_prop * n_blocks)
       attention_blocks <- round(attention_prop * n_blocks)
@@ -361,7 +360,7 @@ troll_world <- R6::R6Class(
       if (erase_blocks + attention_blocks + no_blocks != n_blocks) {
         stop("My rounding is not working!")
       }
-      
+
       # easy programming for balanced condition
       if (abs(erase_prop - 1/3) < 1e-5 && abs(attention_prop - 1/3) < 1e-5) {
         conditions <- c("no erasure", "erasure", "attention")
@@ -379,16 +378,16 @@ troll_world <- R6::R6Class(
         # }
 
         cvec <- c(rep("erasure", erase_blocks), rep("attention", attention_blocks), rep("no erasure", no_blocks))
-        
+
         # this is flawed since we have no assurance that the empirical frequencies are close to the target
         #e <- sample(conditions, n_blocks, replace = TRUE, prob = probs) 
-        
+
         #ec <- rep(e, each=block_length)
-        
+
         cvec <- sample(cvec, length(cvec))
-        
+
       }
-      
+
       self$erase_condition <- rep(cvec, each=block_length)
       aa <- rep(cvec, each=block_length)
       
@@ -399,10 +398,10 @@ troll_world <- R6::R6Class(
         # shorten last phase if it goes beyond number of trials
         aa <- aa[1:private$pvt_n_trials]
       }
-      
+
       self$erase_condition <- aa
       self$erasure_segments$trial_type <- aa
-      
+
       # seed erased segments that start each attention and erasure phase
       pshift <- which(aa != dplyr::lag(aa, default = "FIRST") & aa != "no erasure")
       for (pp in pshift) {
@@ -410,7 +409,7 @@ troll_world <- R6::R6Class(
         self$erase_segment(erase = e, trial=pp)
       }
     },
-    
+
     apply_flex = function(low_avg=20, low_spread=5, decrease_avg=10, decrease_spread=5, high_avg=5, high_spread=2, 
                           increase_avg=10, increase_spread=5, spread_max=80, spread_min=10, jump_high=TRUE, start_low=TRUE) {
 
@@ -465,22 +464,11 @@ troll_world <- R6::R6Class(
     },
 
     #' @description rescale a vector to have a given 2*spread range around the mean and a designated mean
-    v_rescale = function(x, spread = 20, mean_val=50, force_min = 1) {
-      checkmate::assert_number(force_min, lower=0)
-      # mx <- mean(x)
-      l <- mean_val - spread
-      h <- mean_val + spread
-      if (is.na(l) || is.na(h)) warning("Missing rescale values")
-      if (abs(l - h) < 1e-3) warning("Low and high rescale values do not differ")
-      y <- scales::rescale(x, to = c(l, h))
-      adjust <- mean_val - mean(y)
-      y <- y + adjust
+    #' @param spread the range of rescaled values
+    #' @param mean_val the average of rescaled values
+    #' @param force_min if > 0, the minimum rescaled value (can undermine mean)
+    v_rescale = Rcpp::cppFunction(code = readLines(file.path(rcpp_source_dir, "v_rescale.cpp")), rebuild=FALSE, cacheDir=rcpp_cache_dir),
 
-      # if we want to force a given minimum to hold, apply it here (can undermine the mean)
-      if (force_min > 0) y <- y - (min(y) - force_min)
-      return(y)
-    },
-    
     get_cur_values = function() {
       if (self$cur_trial > private$pvt_n_trials) {
         warning("You have already iterated through trials. Use $reset_counter to start over")
