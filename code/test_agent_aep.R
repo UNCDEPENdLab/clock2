@@ -90,77 +90,125 @@ if (generate_design_matrix_for_inquisit==TRUE){
   #write.csv(inq_val,file = '2023-09-12-Design-File-asMatrix.csv')
   inq_tri <- data.frame(t(inq_val))
   inq_tri <- inq_tri %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = extract_numeric(RT))
-  inq_tri <- inq_tri %>% group_by(trial) %>% mutate(qv = rep(quantile(value,c(.25, .75)),length.out=360), pp = value >= qv[1] & value <= qv[2]) %>% ungroup() %>% select(!qv)
+  inq_tri <- inq_tri %>% arrange(trial,RT)
   
-  nR <- nrow(t(inq_val)) # these will be separate lists
-  nC <- ncol(t(inq_val)) # these will be the items in each list
   
-  # generate values for erasures, 1 list per trial
+  # generate value, RT and trial lists as 1 x (nT x nRT) inquisit lists
   options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
-  iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) 
-  row_prefix = 'trqv_';
-  df0 <- NULL
-  for (iR in 1:nR){ # start at 1st row
-    df <- inq_tri %>% filter(trial==iR)
-    df <- df %>% filter(pp == TRUE)
-    df <- df %>% filter(!is.na(df$value))
-    nC <- nrow(df)
-    for (iC in 2:nC){ # start at 2, ignore col names
-      if (iC==2){
-        df0 <- paste0('<list ',row_prefix,as.character(iR-1),'>','\n','/ items = ( ',df$value[iC])
-      } else if(iC>2 & iC < nC){
-        df0 <- paste0(df0,', ',df$value[iC])
-      }else if (iC==nC){
-        df0 <- paste0(df0,',',df$value[iC],')','\n','/ selectionrate = trial \n/ selectionmode=values.values_erasure_index;','\n','</list>')
-      }
-    }
-    iqx_formatted_df[iR,1] <- df0 
-  }
-  write.table(iqx_formatted_df,'values_erasure.txt',row.names=F,col.names=F,quote=F)
-  options("encoding" = "native.enc") # change encoding back to native
-  
-  
-  # generate indices for erasures, 1 list per trial
-  options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
-  iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) 
-  row_prefix = 'trqi_'
-  df0 <- NULL
-  for (iR in 1:nR){ # start at 1st row
-    df <- inq_tri %>% filter(trial==iR)
-    df <- df %>% filter(pp == TRUE)
-    df <- df %>% filter(!is.na(df$value))
-    nC <- nrow(df)
-    for (iC in 2:nC){ # start at 2, ignore col names
-      if (iC==2){
-        df0 <- paste0('<list ',row_prefix,as.character(iR-1),'>','\n','/ items = ( ',df$RT[iC])
-      } else if(iC>2 & iC < nC){
-        df0 <- paste0(df0,', ',df$RT[iC])
-      }else if (iC==nC){
-        df0 <- paste0(df0,',',df$RT[iC],')','\n','/ selectionrate = trial \n/ selectionmode=values.degrees_erasure_index;','\n','</list>')
-      }
-    }
-    iqx_formatted_df[iR,1] <- df0 
-  }
-  write.table(iqx_formatted_df,'degrees_erasure.txt',row.names=F,col.names=F,quote=F)
-  options("encoding" = "native.enc") # change encoding back to native
-  
-  # generate conditional to select trial list depending on trial
-  nR <- nrow(t(inq_val)) # these will be separate lists
-  options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
-  iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) # import csv as data frame
-  df0 <- NULL
+  df0 <- NULL;
+  dq0 <- NULL;
+  dz0 <- NULL;
+  nR <- nrow(inq_tri);
   for (iR in 1:nR){
     if (iR==1){
-      df0 <- paste0('if (values.trial == ',as.character(iR),'){\nvalues.degrees_erasure_index = rand(1,list.trqv_',as.character(iR),'.itemcount); values.values_erasure_index=values.degrees_erasure_index; values.curr_val_era = list.trqv_',as.character(iR),'.nextvalue; values.curr_index_era = list.trqi_',as.character(iR),'.nextvalue;');
+      df0 <- paste0('<list values>\n/ items = (',as.character(inq_tri$value[iR]),',');
+      dq0 <- paste0('<list RT>\n/ items = (',as.character(inq_tri$RT[iR]),','); 
+      dz0 <- paste0('<list trial>\n/ items = (',as.character(inq_tri$trial[iR]),','); 
     } else if (iR > 1 && iR < nR){
-      df0 <- paste0('} else if (values.trial ==',as.character(iR),'){\nvalues.degrees_erasure_index = rand(1,list.trqv_',as.character(iR),'.itemcount); values.values_erasure_index=values.degrees_erasure_index; values.curr_val_era = list.trqv_',as.character(iR),'.nextvalue; values.curr_index_era = list.trqi_',as.character(iR),'.nextvalue;');
+      df0 <- paste0(df0,as.character(inq_tri$value[iR]),',');
+      dq0 <- paste0(dq0,as.character(inq_tri$RT[iR]),',');
+      dz0 <- paste0(dz0,as.character(inq_tri$trial[iR]),',');
     } else if (iR==nR){
-      df0 <- paste0('} else if (values.trial ==',as.character(iR),'){\nvalues.degrees_erasure_index = rand(1,list.trqv_',as.character(iR),'.itemcount); values.values_erasure_index=values.degrees_erasure_index; values.curr_val_era = list.trqv_',as.character(iR),'.nextvalue; values.curr_index_era = list.trqi_',as.character(iR),'.nextvalue;');
+      df0 <- paste0(df0,as.character(inq_tri$value[iR]),')\n/ selectionrate = always\n</list>')
+      dq0 <- paste0(dq0,as.character(inq_tri$RT[iR]),')\n/ selectionrate = always\n</list>')
+      dz0 <- paste0(dz0,as.character(inq_tri$trial[iR]),')\n/ selectionrate = always\n</list>')
     }
-    iqx_formatted_df[iR,1] <- df0 
+    if ((iR %% 1000)==0){
+      print(iR/nR);
+    }
   }
-  write.table(iqx_formatted_df,'erasure_trial.txt',row.names=F,col.names=F,quote=F)
+  write.table(df0,'values.txt',row.names=F,col.names=F,quote=F)
+  write.table(dq0,'RTs.txt',row.names=F,col.names=F,quote=F)
+  write.table(dz0,'trials.txt',row.names=F,col.names=F,quote=F)
   options("encoding" = "native.enc") # change encoding back to native
+  
+  #inq_tri <- inq_tri %>% group_by(trial) %>% mutate(qv = rep(quantile(value,c(.25, .75)),length.out=360), pp = value >= qv[1] & value <= qv[2]) %>% ungroup() %>% select(!qv)
+  # nR <- nrow(t(inq_val)) # these will be separate lists
+  # nC <- ncol(t(inq_val)) # these will be the items in each list
+  # 
+  # # generate values for erasures, 1 list per trial
+  # options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
+  # iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) 
+  # row_prefix = 'trqv_';
+  # df0 <- NULL
+  # for (iR in 1:nR){ # start at 1st row
+  #   df <- inq_tri %>% filter(trial==iR)
+  #   df <- df %>% filter(pp == TRUE)
+  #   df <- df %>% filter(!is.na(df$value))
+  #   nC <- nrow(df)
+  #   for (iC in 2:nC){ # start at 2, ignore col names
+  #     if (iC==2){
+  #       df0 <- paste0('<list ',row_prefix,as.character(iR-1),'>','\n','/ items = ( ',df$value[iC])
+  #     } else if(iC>2 & iC < nC){
+  #       df0 <- paste0(df0,', ',df$value[iC])
+  #     }else if (iC==nC){
+  #       df0 <- paste0(df0,',',df$value[iC],')','\n','/ selectionrate = trial \n/ selectionmode=values.values_erasure_index;','\n','</list>')
+  #     }
+  #   }
+  #   iqx_formatted_df[iR,1] <- df0 
+  # }
+  # write.table(iqx_formatted_df,'values_erasure.txt',row.names=F,col.names=F,quote=F)
+  # options("encoding" = "native.enc") # change encoding back to native
+  # 
+  # 
+  # # generate indices for erasures, 1 list per trial
+  # options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
+  # iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) 
+  # row_prefix = 'trqi_'
+  # df0 <- NULL
+  # for (iR in 1:nR){ # start at 1st row
+  #   df <- inq_tri %>% filter(trial==iR)
+  #   df <- df %>% filter(pp == TRUE)
+  #   df <- df %>% filter(!is.na(df$value))
+  #   nC <- nrow(df)
+  #   for (iC in 2:nC){ # start at 2, ignore col names
+  #     if (iC==2){
+  #       df0 <- paste0('<list ',row_prefix,as.character(iR-1),'>','\n','/ items = ( ',df$RT[iC])
+  #     } else if(iC>2 & iC < nC){
+  #       df0 <- paste0(df0,', ',df$RT[iC])
+  #     }else if (iC==nC){
+  #       df0 <- paste0(df0,',',df$RT[iC],')','\n','/ selectionrate = trial \n/ selectionmode=values.degrees_erasure_index;','\n','</list>')
+  #     }
+  #   }
+  #   iqx_formatted_df[iR,1] <- df0 
+  # }
+  # write.table(iqx_formatted_df,'degrees_erasure.txt',row.names=F,col.names=F,quote=F)
+  # options("encoding" = "native.enc") # change encoding back to native
+  # 
+  # # generate conditional to select trial list depending on trial
+  # nR <- nrow(t(inq_val)) # these will be separate lists
+  # options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
+  # iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) # import csv as data frame
+  # df0 <- NULL
+  # for (iR in 1:nR){
+  #   if (iR==1){
+  #     df0 <- paste0('if (values.trial == ',as.character(iR),'){\nvalues.degrees_erasure_index = rand(1,list.trqv_',as.character(iR-1),'.itemcount); values.values_erasure_index=values.degrees_erasure_index; values.curr_val_era = list.trqv_',as.character(iR-1),'.nextvalue; values.curr_index_era = list.trqi_',as.character(iR-1),'.nextvalue;');
+  #   } else if (iR > 1 && iR < nR){
+  #     df0 <- paste0('} else if (values.trial ==',as.character(iR),'){\nvalues.degrees_erasure_index = rand(1,list.trqv_',as.character(iR-1),'.itemcount); values.values_erasure_index=values.degrees_erasure_index; values.curr_val_era = list.trqv_',as.character(iR-1),'.nextvalue; values.curr_index_era = list.trqi_',as.character(iR-1),'.nextvalue;');
+  #   } else if (iR==nR){
+  #     df0 <- paste0('} else if (values.trial ==',as.character(iR),'){\nvalues.degrees_erasure_index = rand(1,list.trqv_',as.character(iR-1),'.itemcount); values.values_erasure_index=values.degrees_erasure_index; values.curr_val_era = list.trqv_',as.character(iR-1),'.nextvalue; values.curr_index_era = list.trqi_',as.character(iR-1),'.nextvalue;\n}');
+  #   }
+  #   iqx_formatted_df[iR,1] <- df0 
+  # }
+  # write.table(iqx_formatted_df,'erasure_trial.txt',row.names=F,col.names=F,quote=F)
+  # options("encoding" = "native.enc") # change encoding back to native
+  # 
+  # # generate removal of erasures in 30 degree arcs around previously selected erasures
+  # options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
+  # iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=nR)) # import csv as data frame
+  # df0 <- NULL
+  # iq <- seq(15,-15,length.out=31) # center - 15 : center + 15 degrees (360 possible degrees)
+  # for (i in iq){ # the sequence of if else statements
+  #     df0 <- paste0('if (values.curr_index_era > ',as.character(i),' && values.curr_index_era < values.length_trqi',as.character(i),'\n');
+  #     for (j in iq){ # the sequence of list appending statements
+  #       df0 <- paste0(df0,'list.degrees_used.appenditem(list.degrees_era.indexof(values.curr_index_era,',as.character(j),')); \n')
+  #       iqx_formatted_df[iR,1] <- df0
+  #   }
+  # }
+  # write.table(iqx_formatted_df,'append_used.txt',row.names=F,col.names=F,quote=F)
+  # options("encoding" = "native.enc") # change encoding back to native
+}
+  
   
   values <- data.frame(round(t(tt$get_values_matrix())),0)
   #values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial")

@@ -9,9 +9,9 @@ iqx_formatted_df <- data.frame(matrix(ncol=1, nrow=1)) # import csv as data fram
 df0 <- NULL
 for (iT in 1:nT-1){
   if (iT==1){
-    df0 <- paste0('\t list.rt_',as.character(df_t$ix[iT]),'.nextindex; \n')
+    df0 <- paste0('\t list.rt_',as.character(df_t$ix[iT]),'.nextvalue; ')
   } else if (iT > 1){
-    df0 <- paste0(df0,'\t list.rt_',as.character(df_t$ix[iT]),'.nextindex; \n')
+    df0 <- paste0(df0,'\t list.rt_',as.character(df_t$ix[iT]),'.nextvalue; ')
   }
 }
 iqx_formatted_df[1,1] <- df0 
