@@ -99,8 +99,8 @@ if (animated_plot) {
   }
 }
   
-inq_val <- round(t(tt$get_values_matrix()),0)
-write.csv(inq_val,file = '2023-09-12-Design-File-asMatrix.csv')
+#inq_val <- round(t(tt$get_values_matrix()),0)
+#write.csv(inq_val,file = '2023-09-12-Design-File-asMatrix.csv')
 
 values <- data.frame(round(t(tt$get_values_matrix())),0)
 #values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial")
