@@ -1,3 +1,6 @@
+if (!exists("rcpp_cache_dir")) rcpp_cache_dir <- "~/Rcpp_cache"
+if (!exists("rcpp_source_dir")) rcpp_source_dir <- "~/Data_Analysis/clock2/code/cpp"
+if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1) rcpp_source_dir <- "~/clock2/code/cpp"
 # von mises basis function class
 vm_bf <- R6::R6Class(
   "vm_bf",
@@ -9,7 +12,7 @@ vm_bf <- R6::R6Class(
     pvt_basis_weight_vec = NULL,
 
     # add fast C++ version of the von Mises basis setup
-    vm_cpp = Rcpp::cppFunction(code = readLines("code/vm_bf.cpp"), depends = c("RcppArmadillo")),
+    vm_cpp = Rcpp::cppFunction(code = readLines(file.path(rcpp_source_dir, "vm_bf.cpp")), rebuild=FALSE, cacheDir=rcpp_cache_dir, depends = c("RcppArmadillo")),
 
     # cpp version of setup
     setup_bvals = function() {
@@ -161,7 +164,7 @@ vm_circle_set <- function(n_basis=12, weights=0, width_sd=0.3) {
   })
   
   vset <- rbf_set$new(elements=vset)
-  
+
   # vdf <- reshape2::melt(vset, varnames=c("point", "basis"))
   # bdf <- merge(vdf, xdf, by="point", all = TRUE)
   # 
@@ -177,18 +180,9 @@ rbf_set <- R6::R6Class(
   "rbf_set",
   private = list(
     units="radians",
-    
+
     # add fast C++ version of the von Mises basis setup
-    compute_overlap = Rcpp::cppFunction(code = readLines("code/compute_overlap.cpp"))
-    
-    # function that computes the proportion overlap between two vm bfs
-    # compute_overlap = function(b1, b2) {
-    #   e1 <- b1$get_basis()
-    #   e2 <- b2$get_basis()
-    #   stopifnot(abs(sum(e1) - 1) < 1e-5) # verify AUC = 1
-    #   stopifnot(abs(sum(e2) - 1) < 1e-5)
-    #   sum(pmin(e1, e2))
-    # }
+    compute_overlap = Rcpp::cppFunction(code = readLines(file.path(rcpp_source_dir, "compute_overlap.cpp")), rebuild = FALSE, cacheDir = rcpp_cache_dir)
   ),
   public = list(
     elements = list(),
@@ -289,36 +283,3 @@ rbf_set <- R6::R6Class(
     }
   )
 )
-
-
-
-
-
-### 
-# prototype Gaussian radial basis (not currently used)
-rbf <- R6::R6Class(
-  "rbf",
-  public = list(
-    units="degrees",
-    center = 0,
-    width_sd = 10,
-    #probability = 0.5,
-    weight = 5,
-    weight_sd = 1,
-    min_weight = 0,
-    initialize = function(units = NULL, center = NULL, width_sd = NULL, weight = NULL, weight_sd = NULL, min_weight = NULL) {
-      if (!is.null(units)) self$units <- units
-      if (!is.null(center)) self$center <- center
-      if (!is.null(width_sd)) self$width_sd <- width_sd
-      if (!is.null(weight)) self$weight <- weight
-      if (!is.null(weight_sd)) self$weight_sd <- weight_sd
-      if (!is.null(min_weight)) self$min_weight <- min_weight
-    },
-    get_wfunc = function() {
-      dvec <- dnorm(x=1:360, mean=self$center, sd=self$width_sd)
-      dvec <- dvec/max(dvec)*self$weight #renormalize to max=1
-      return(dvec)
-    }
-  )
-)
-

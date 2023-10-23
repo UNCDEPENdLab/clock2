@@ -1,9 +1,9 @@
 # R script for handling cluster queuing for clock2 simulations
-
+library(tidyverse)
 basedir <- "~/code/clock2/code/"
 output_dir <- "~/code/clock2/simulations"
 sbatch_dir <- "~/code/clock2/code/sbatch/"
-test <- T
+test <- F
 test_on_mac <- F
 # if (test && test_on_mac) {
 #   basedir <- "~/OneDrive - University of Pittsburgh/Momentum_EMA/eeg_data_t_split/"
@@ -26,23 +26,24 @@ niterations <- length(idf_list)
 for (f in 1:niterations) {data.table::fwrite(idf_list[[f]], file = paste0("grid_", f, ".csv"))}
 
 
-for (f in 1:niterations) {
+#for (f in 1:niterations) {
+  for (f in 1:2) {
+
   if (!test) {
     system(
       paste0(
-        "cd ", output_dir, "; ",
+        "cd ", sbatch_dir, "; ",
         "sbatch --time=23:00:00 --mem=1g",
         " --export=sourcefilestart=", f,
         " sbatch_clock2_sim.bash"
       )
     )
     #write compute level to temporary file
-    writeLines(as.character(level), this_f)
   }
   if (!silent) {
     cat(
       paste0(
-        "cd ", output_dir, "; ",
+        "cd ", sbatch_dir, "; ",
         "sbatch --time=23:00:00 --mem=1g",
         " --export=sourcefilestart=", f,
         " sbatch_clock2_sim.bash\n"

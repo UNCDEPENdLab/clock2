@@ -1,6 +1,11 @@
 library(tidyverse)
-if (sum(stringr::str_detect(Sys.info(), "Alex|alexdombrovski"))>1) {setwd("~/code/clock2/")} else {
-  setwd("~/Data_Analysis/clock2")}
+if (sum(stringr::str_detect(Sys.info(), "Alex|alexdombrovski"))>1) {
+  setwd("~/code/clock2/")
+} else if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
+  setwd("~/clock2/")
+} else {
+  setwd("~/Data_Analysis/clock2")
+}
 source("code/von_mises_basis.R")
 source("code/clock2_troll_world.R")
 source("code/scepticc.R")
@@ -99,8 +104,8 @@ if (animated_plot) {
   }
 }
   
-inq_val <- round(t(tt$get_values_matrix()),0)
-write.csv(inq_val,file = '2023-09-12-Design-File-asMatrix.csv')
+#inq_val <- round(t(tt$get_values_matrix()),0)
+#write.csv(inq_val,file = '2023-09-12-Design-File-asMatrix.csv')
 
 values <- data.frame(round(t(tt$get_values_matrix())),0)
 #values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial")
@@ -157,7 +162,7 @@ world$erasure_segments
 
 # dynamic contingency
 ttd <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=5)
-ttd$apply_flex(high_avg = 1, high_spread = 0, low_avg = 40, spread_max = 100, jump_high = T)
+ttd$apply_flex(high_avg = 1, high_spread = 0, low_avg = 10, spread_max = 150, jump_high = T)
 plot(ttd$get_starting_values())
 plot(ttd$spread)
 sceptic_agent <- scepticc$new(n_basis=12, n_points=200, contingency=ttd)
@@ -207,8 +212,8 @@ for(ii in 1:10000) {
   dd[ii] <- attr(vnew, "delta")
   #dp[ii] <- attr(vnew, "delta_pct")
   dp[ii] <- attr(vnew, "pct_orig")
-  #plot(vnew, type="l", main=attr(vnew, "ecent"))
-  #Sys.sleep(.5)
+  plot(vnew, type="l", main=attr(vnew, "ecent"))
+  Sys.sleep(.5)
 }
 
 for(ii in 1:30) {
@@ -270,7 +275,7 @@ table(dp > 0)
 
 
 erase <- function(v, loc, width = pi/6, v_quantiles = c(.25, .75), r_quantiles = c(.25, .75)) {
-  checkmate::assert_number(pos, lower=0, upper=1)
+  #checkmate::assert_number(pos, lower=0, upper=1)
   stopifnot(length(v) == length(loc))
   v_new <- v
   

@@ -1,7 +1,11 @@
+library(R6)
+library(tidyverse)
+
 base_dir <- "~/code/clock2/code/"
 output_dir <- "~/code/clock2/simulations"
 
-j <- paste0(Sys.getenv("sourcefilestart"))
+j <- as.numeric(paste0(Sys.getenv("sourcefilestart")))
+j = 1
 setwd(output_dir)
 files <- list.files(pattern = "grid_")
 df <- data.table::fread(file = files[j])
@@ -21,6 +25,7 @@ iterate_sim <- function(df, bump_prominence, ncenters, centers, values, width_sd
   bump_prominence <- 10
   bump_value <- mean_val * bump_prominence
   bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
+  setwd(base_dir)
   contingency <- tryCatch(vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians"),
                           error = function(e) {
                             print(e)
@@ -90,6 +95,7 @@ source("scepticc.R")
 
 d_list <- list()
 for(i in seq(nrow(df))) {
+#for(i in seq(2)) {  # testing 
   d <- tryCatch(suppressMessages(iterate_sim(df, bump_prominence, ncenters, centers, values, width_sd, i, j)),
                 error = function(e) {
                   print(e)
