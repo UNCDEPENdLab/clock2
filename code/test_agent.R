@@ -162,7 +162,7 @@ world$erasure_segments
 
 # dynamic contingency
 ttd <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=5)
-ttd$apply_flex(high_avg = 1, high_spread = 0, low_avg = 40, spread_max = 100, jump_high = T)
+ttd$apply_flex(high_avg = 1, high_spread = 0, low_avg = 10, spread_max = 150, jump_high = T)
 plot(ttd$get_starting_values())
 plot(ttd$spread)
 sceptic_agent <- scepticc$new(n_basis=12, n_points=200, contingency=ttd)
@@ -212,8 +212,8 @@ for(ii in 1:10000) {
   dd[ii] <- attr(vnew, "delta")
   #dp[ii] <- attr(vnew, "delta_pct")
   dp[ii] <- attr(vnew, "pct_orig")
-  #plot(vnew, type="l", main=attr(vnew, "ecent"))
-  #Sys.sleep(.5)
+  plot(vnew, type="l", main=attr(vnew, "ecent"))
+  Sys.sleep(.5)
 }
 
 for(ii in 1:30) {
@@ -275,7 +275,7 @@ table(dp > 0)
 
 
 erase <- function(v, loc, width = pi/6, v_quantiles = c(.25, .75), r_quantiles = c(.25, .75)) {
-  checkmate::assert_number(pos, lower=0, upper=1)
+  #checkmate::assert_number(pos, lower=0, upper=1)
   stopifnot(length(v) == length(loc))
   v_new <- v
   
