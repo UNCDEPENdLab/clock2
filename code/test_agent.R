@@ -2,7 +2,7 @@ library(tidyverse)
 if (sum(stringr::str_detect(Sys.info(), "Alex|alexdombrovski"))>1) {
   setwd("~/code/clock2/")
 } else if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
-  setwd('/clock2/')
+  setwd("~/clock2/")
 } else {
   setwd("~/Data_Analysis/clock2")
 }
