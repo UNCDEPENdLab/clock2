@@ -1,10 +1,11 @@
 library(tidyverse)
 if (sum(stringr::str_detect(Sys.info(), "Alex|alexdombrovski"))>1) {
   setwd("~/code/clock2/")
-} else if (sum(stringr::str_detect(Sys.info(), "andypaple"))>1)  {
+} else if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   setwd('/clock2/')
 } else {
-  setwd("~/Data_Analysis/clock2")}
+  setwd("~/Data_Analysis/clock2")
+}
 source("code/von_mises_basis.R")
 source("code/clock2_troll_world.R")
 source("code/scepticc.R")
