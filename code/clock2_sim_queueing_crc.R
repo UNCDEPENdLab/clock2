@@ -110,7 +110,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     }
     plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii], ss), ylim = range(aa), xaxt='n')
     axis(side = 1, at = seq(1, 360, by=30), labels= loc[seq(1, 360, by=30)])
-    Sys.sleep(.2)
+    invisible(readline(prompt="Press [enter] to continue"))
     
   }
   
