@@ -1,25 +1,32 @@
 library(R6)
 library(tidyverse)
-
-base_dir <- "~/code/clock2/code/"
-output_dir <- "~/code/clock2/simulations"
-
-j <- as.numeric(paste0(Sys.getenv("sourcefilestart")))
-j = 1
-setwd(output_dir)
-files <- list.files(pattern = "grid_")
-df <- data.table::fread(file = files[j])
+if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
+  base_dir <- "~/clock2/code/"
+  output_dir <- "~/clock2/simulations"
+  
+} else {
+  base_dir <- "~/code/clock2/code/"
+  output_dir <- "~/code/clock2/simulations"
+  j <- as.numeric(paste0(Sys.getenv("sourcefilestart")))
+  j = 1
+  setwd(output_dir)
+  files <- list.files(pattern = "grid_")
+  df <- data.table::fread(file = files[j])
+}
 
 iterate_sim <- function(df, bump_prominence, ncenters, centers, values, width_sd, i, j) {
-  set.seed(df$iteration[i])
-  ncenters <- 9 # how many gaussians there are
-  mean_val <- 10 # mean reward rate
-  sd_val <- 2 # standard deviation of reward / range of rewards
-  centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
-  values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
-  width_sd <- 20 # fixed, how wide are the underlying Gaussians
-  sanity_checks = F # diagnostic plots inside simulation loop
-  ntrials = 300
+  if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
+  } else {
+    set.seed(df$iteration[i])
+    ncenters <- 9 # how many gaussians there are
+    mean_val <- 10 # mean reward rate
+    sd_val <- 2 # standard deviation of reward / range of rewards
+    centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
+    values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
+    width_sd <- 20 # fixed, how wide are the underlying Gaussians
+    sanity_checks = T # diagnostic plots inside simulation loop
+    ntrials = 300
+  }
   cat(sprintf("In loop i: %d, j: %d\n", i, j), file = "run_log.txt", append=T)
   # set up contingency
   bump_prominence <- 10
@@ -84,30 +91,40 @@ iterate_sim <- function(df, bump_prominence, ncenters, centers, values, width_sd
   r <- cor(d$h, d$u, use = "complete.obs", method = "spearman")
   # u_sampled <- sum(d$in_segment)
   # browser()
-  results <- as.data.frame(cbind(df[i,], r))
-  return(results)
-  # df$tt[i] <- tt # for now, don't save the actual contingency
+  if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
+    results <- tt
+    return(results)
+  } else {
+    results <- as.data.frame(cbind(df[i,], r))
+    return(results)
+    # df$tt[i] <- tt # for now, don't save the actual contingency
+  }
 }
 setwd(base_dir)
 source("von_mises_basis.R")
 source("clock2_troll_world.R")
 source("scepticc.R")
 
-d_list <- list()
-for(i in seq(nrow(df))) {
-#for(i in seq(2)) {  # testing 
-  d <- tryCatch(suppressMessages(iterate_sim(df, bump_prominence, ncenters, centers, values, width_sd, i, j)),
-                error = function(e) {
-                  print(e)
-                  save.image(file=sprintf("iterate_sim_error_state_%d_%d.RData", i, j))
-                  return(NULL)
-                })
-  if (is.null(d)) {
-    print(paste0("Bad seed, low_avg=", df$low_avg[i], " iteration =", df$iteration[i],
-                 " seed=", df$seed[i]))
-    break}
-  d_list[[i]] <- d
+
+if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
+} else {
+  
+  d_list <- list()
+  for(i in seq(nrow(df))) {
+    #for(i in seq(2)) {  # testing 
+    d <- tryCatch(suppressMessages(iterate_sim(df, bump_prominence, ncenters, centers, values, width_sd, i, j)),
+                  error = function(e) {
+                    print(e)
+                    save.image(file=sprintf("iterate_sim_error_state_%d_%d.RData", i, j))
+                    return(NULL)
+                  })
+    if (is.null(d)) {
+      print(paste0("Bad seed, low_avg=", df$low_avg[i], " iteration =", df$iteration[i],
+                   " seed=", df$seed[i]))
+      break}
+    d_list[[i]] <- d
+  }
+  out_df <- data.table::rbindlist(d_list)
+  setwd(output_dir)
+  data.table::fwrite(out_df, file = paste0(j, "_iteration_crc.csv"))
 }
-out_df <- data.table::rbindlist(d_list)
-setwd(output_dir)
-data.table::fwrite(out_df, file = paste0(j, "_iteration_crc.csv"))
