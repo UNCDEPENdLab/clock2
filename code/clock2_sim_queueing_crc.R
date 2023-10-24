@@ -30,7 +30,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
                           epsilon_u = c(0.3), # 0.0833 is at chance, low correlation -- not worth testing
                           block_length = c(10), # block length > 15 had higher correlations, not worth testing
                           low_avg = c(10),
-                          iteration = c(5888),
+                          iteration = c(8395),
                           #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
                           seed = 1)
 } else {
