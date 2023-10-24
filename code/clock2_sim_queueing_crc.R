@@ -102,21 +102,24 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   
   aa <- tt$get_values_matrix("objective", quiet=F) # all manipulations, matrix of expected values, p_reward =0.7 fixed for now
   loc <- round(tt$get_pvec(), 2)
+  setwd('~/clock2/animation/')
   for (ii in 1:nrow(aa)) {
     if (tt$erasure_segments$trial_type[ii] == "erasure") {
       ss <- paste(", er:", round(tt$erasure_segments[ii,"segment_min"], 2))
     } else {
       ss <- ""
     }
-    plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii], ss), ylim = range(aa), xaxt='n')
+    pdf(paste0('image-',ii,'.pdf'),height=12,width=12)
+    gg1 <- plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii], ss), ylim = range(aa), xaxt='n')
     axis(side = 1, at = seq(1, 360, by=30), labels= loc[seq(1, 360, by=30)])
-    invisible(readline(prompt="Press [enter] to continue"))
-    
+    print(gg1)
+    dev.off()
   }
   
   
   
-} else {
+
+  } else {
   
   #for (f in 1:niterations) {
   for (f in 1:2) {
