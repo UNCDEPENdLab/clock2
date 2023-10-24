@@ -30,7 +30,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
                           epsilon_u = c(0.3), # 0.0833 is at chance, low correlation -- not worth testing
                           block_length = c(10), # block length > 15 had higher correlations, not worth testing
                           low_avg = c(10),
-                          iteration = c(8395),
+                          iteration = c(6604),
                           #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
                           seed = 1)
 } else {
@@ -64,6 +64,14 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   i = 1
   j = 1
   tt <- iterate_sim(df, bump_prominence, ncenters, centers, values, width_sd, i, j)
+  
+  values <- data.frame(round(t(tt$get_values_matrix())),0)
+  #values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial")
+  values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial") %>%
+    mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
+                                                                             vmax_location = timepoint[which.max(value)])
+  plot(values$vmax_location)
+  
   
   inq_val <- round(t(tt$get_values_matrix()),0)
   inq_tri <- data.frame(t(inq_val))
