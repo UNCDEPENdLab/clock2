@@ -30,7 +30,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
                           epsilon_u = c(0.3), # 0.0833 is at chance, low correlation -- not worth testing
                           block_length = c(10), # block length > 15 had higher correlations, not worth testing
                           low_avg = c(10),
-                          iteration = c(8014),
+                          iteration = c(5888),
                           #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
                           seed = 1)
 } else {
@@ -71,34 +71,34 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   inq_tri <- inq_tri %>% arrange(trial,RT)
   
   
-  # generate value, RT and trial lists as 1 x (nT x nRT) inquisit lists
-  options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
-  df0 <- NULL;
-  dq0 <- NULL;
-  dz0 <- NULL;
-  nR <- nrow(inq_tri);
-  for (iR in 1:nR){
-    if (iR==1){
-      df0 <- paste0('<list values>\n/ items = (',as.character(inq_tri$value[iR]),',');
-      dq0 <- paste0('<list RT>\n/ items = (',as.character(inq_tri$RT[iR]),','); 
-      dz0 <- paste0('<list trial>\n/ items = (',as.character(inq_tri$trial[iR]),','); 
-    } else if (iR > 1 && iR < nR){
-      df0 <- paste0(df0,as.character(inq_tri$value[iR]),',');
-      dq0 <- paste0(dq0,as.character(inq_tri$RT[iR]),',');
-      dz0 <- paste0(dz0,as.character(inq_tri$trial[iR]),',');
-    } else if (iR==nR){
-      df0 <- paste0(df0,as.character(inq_tri$value[iR]),')\n/ selectionrate = always\n</list>')
-      dq0 <- paste0(dq0,as.character(inq_tri$RT[iR]),')\n/ selectionrate = always\n</list>')
-      dz0 <- paste0(dz0,as.character(inq_tri$trial[iR]),')\n/ selectionrate = always\n</list>')
-    }
-    if ((iR %% 1000)==0){
-      print(iR/nR);
-    }
-  }
-  write.table(df0,'values.txt',row.names=F,col.names=F,quote=F)
-  write.table(dq0,'RTs.txt',row.names=F,col.names=F,quote=F)
-  write.table(dz0,'trials.txt',row.names=F,col.names=F,quote=F)
-  options("encoding" = "native.enc") # change encoding back to native
+  # # generate value, RT and trial lists as 1 x (nT x nRT) inquisit lists
+  # options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
+  # df0 <- NULL;
+  # dq0 <- NULL;
+  # dz0 <- NULL;
+  # nR <- nrow(inq_tri);
+  # for (iR in 1:nR){
+  #   if (iR==1){
+  #     df0 <- paste0('<list values>\n/ items = (',as.character(inq_tri$value[iR]),',');
+  #     dq0 <- paste0('<list RT>\n/ items = (',as.character(inq_tri$RT[iR]),','); 
+  #     dz0 <- paste0('<list trial>\n/ items = (',as.character(inq_tri$trial[iR]),','); 
+  #   } else if (iR > 1 && iR < nR){
+  #     df0 <- paste0(df0,as.character(inq_tri$value[iR]),',');
+  #     dq0 <- paste0(dq0,as.character(inq_tri$RT[iR]),',');
+  #     dz0 <- paste0(dz0,as.character(inq_tri$trial[iR]),',');
+  #   } else if (iR==nR){
+  #     df0 <- paste0(df0,as.character(inq_tri$value[iR]),')\n/ selectionrate = always\n</list>')
+  #     dq0 <- paste0(dq0,as.character(inq_tri$RT[iR]),')\n/ selectionrate = always\n</list>')
+  #     dz0 <- paste0(dz0,as.character(inq_tri$trial[iR]),')\n/ selectionrate = always\n</list>')
+  #   }
+  #   if ((iR %% 1000)==0){
+  #     print(iR/nR);
+  #   }
+  # }
+  # write.table(df0,'values.txt',row.names=F,col.names=F,quote=F)
+  # write.table(dq0,'RTs.txt',row.names=F,col.names=F,quote=F)
+  # write.table(dz0,'trials.txt',row.names=F,col.names=F,quote=F)
+  # options("encoding" = "native.enc") # change encoding back to native
   
   aa <- tt$get_values_matrix("objective", quiet=F) # all manipulations, matrix of expected values, p_reward =0.7 fixed for now
   loc <- round(tt$get_pvec(), 2)
