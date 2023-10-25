@@ -126,13 +126,13 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     }
     
     if (iR==1){
-      df0 <- paste0('<list erasure_locations>\n/ items = (',as.character(temp[iR]),',');
+      df0 <- paste0('<list erasure_locations>\n/ items = (',as.character(temp),',');
       dq0 <- paste0('<list trial_type>\n/ items = ("',as.character(trial_type[iR]),'",');
     } else if (iR > 1 && iR < nR){
-      df0 <- paste0(df0,as.character(temp[iR]),',');
-      dq0 <- paste0(dq0,'"',as.character(trial_type[iR]),'"');
+      df0 <- paste0(df0,as.character(temp),',');
+      dq0 <- paste0(dq0,'"',as.character(trial_type[iR]),'",');
     } else if (iR==nR){
-      df0 <- paste0(df0,as.character(temp[iR]),')\n/ selectionrate = always\n/ selectionmode = values.trial;\n</list>')
+      df0 <- paste0(df0,as.character(temp),')\n/ selectionrate = always\n/ selectionmode = values.trial;\n</list>')
       dq0 <- paste0(dq0,'"',as.character(trial_type[iR]),'")\n/ selectionrate = always\n/ selectionmode = values.trial;\n</list>')
     }
   }
