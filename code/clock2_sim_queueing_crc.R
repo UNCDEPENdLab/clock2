@@ -131,7 +131,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     } else if (iR > 1 && iR < nR){
       df0 <- paste0(df0,as.character(temp),',');
       dq0 <- paste0(dq0,'"',as.character(trial_type[iR]),'",');
-    } else if (iR==nR){
+    } else if (iR==nR-9){
       df0 <- paste0(df0,as.character(temp),')\n/ selectionrate = always\n/ selectionmode = values.trial;\n</list>')
       dq0 <- paste0(dq0,'"',as.character(trial_type[iR]),'")\n/ selectionrate = always\n/ selectionmode = values.trial;\n</list>')
     }
