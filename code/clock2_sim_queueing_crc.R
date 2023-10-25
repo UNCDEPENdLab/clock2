@@ -1,6 +1,6 @@
 # R script for handling cluster queuing for clock2 simulations
 library(tidyverse)
-
+library(BAMBI)
 if (sum(stringr::str_detect(Sys.info(), "Alex|alexdombrovski"))>1) {
   basedir <- "~/code/clock2/code/"
   output_dir <- "~/code/clock2/simulations"
@@ -16,6 +16,7 @@ if (sum(stringr::str_detect(Sys.info(), "Alex|alexdombrovski"))>1) {
 }
 test <- F
 test_on_mac <- F
+animate <- FALSE
 # if (test && test_on_mac) {
 #   basedir <- "~/OneDrive - University of Pittsburgh/Momentum_EMA/eeg_data_t_split/"
 #   output_dir <- "~/OneDrive - University of Pittsburgh/Momentum_EMA/"
@@ -30,7 +31,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
                           epsilon_u = c(0.3), # 0.0833 is at chance, low correlation -- not worth testing
                           block_length = c(10), # block length > 15 had higher correlations, not worth testing
                           low_avg = c(10),
-                          iteration = c(6604),
+                          iteration = c(5888),
                           #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
                           seed = 1)
 } else {
@@ -72,62 +73,97 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
                                                                              vmax_location = timepoint[which.max(value)])
   plot(values$vmax_location)
   
-  
-  inq_val <- round(t(tt$get_values_matrix()),0)
-  inq_tri <- data.frame(t(inq_val))
+  inq_tri <- round(tt$get_values_matrix("objective", quiet=F),0) # all manipulations, matrix of expected values
+  aa <- inq_tri
+  inq_tri <- data.frame(inq_val)
   inq_tri <- inq_tri %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = extract_numeric(RT))
   inq_tri <- inq_tri %>% arrange(trial,RT)
   
-  
-  # # generate value, RT and trial lists as 1 x (nT x nRT) inquisit lists
-  # options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
-  # df0 <- NULL;
-  # dq0 <- NULL;
-  # dz0 <- NULL;
-  # nR <- nrow(inq_tri);
-  # for (iR in 1:nR){
-  #   if (iR==1){
-  #     df0 <- paste0('<list values>\n/ items = (',as.character(inq_tri$value[iR]),',');
-  #     dq0 <- paste0('<list RT>\n/ items = (',as.character(inq_tri$RT[iR]),','); 
-  #     dz0 <- paste0('<list trial>\n/ items = (',as.character(inq_tri$trial[iR]),','); 
-  #   } else if (iR > 1 && iR < nR){
-  #     df0 <- paste0(df0,as.character(inq_tri$value[iR]),',');
-  #     dq0 <- paste0(dq0,as.character(inq_tri$RT[iR]),',');
-  #     dz0 <- paste0(dz0,as.character(inq_tri$trial[iR]),',');
-  #   } else if (iR==nR){
-  #     df0 <- paste0(df0,as.character(inq_tri$value[iR]),')\n/ selectionrate = always\n</list>')
-  #     dq0 <- paste0(dq0,as.character(inq_tri$RT[iR]),')\n/ selectionrate = always\n</list>')
-  #     dz0 <- paste0(dz0,as.character(inq_tri$trial[iR]),')\n/ selectionrate = always\n</list>')
-  #   }
-  #   if ((iR %% 1000)==0){
-  #     print(iR/nR);
-  #   }
-  # }
-  # write.table(df0,'values.txt',row.names=F,col.names=F,quote=F)
-  # write.table(dq0,'RTs.txt',row.names=F,col.names=F,quote=F)
-  # write.table(dz0,'trials.txt',row.names=F,col.names=F,quote=F)
-  # options("encoding" = "native.enc") # change encoding back to native
-  
-  aa <- tt$get_values_matrix("objective", quiet=F) # all manipulations, matrix of expected values, p_reward =0.7 fixed for now
-  loc <- round(tt$get_pvec(), 2)
-  setwd('~/clock2/animation/')
-  for (ii in 1:nrow(aa)) {
-    if (tt$erasure_segments$trial_type[ii] == "erasure") {
-      ss <- paste(", er:", round(tt$erasure_segments[ii,"segment_min"], 2))
-    } else {
-      ss <- ""
+
+  # generate value, RT and trial lists as 1 x (nT x nRT) inquisit lists
+  options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
+  df0 <- NULL;
+  dq0 <- NULL;
+  dz0 <- NULL;
+  nR <- nrow(inq_tri);
+  for (iR in 1:nR){
+    if (iR==1){
+      df0 <- paste0('<list values>\n/ items = (',as.character(inq_tri$value[iR]),',');
+      dq0 <- paste0('<list RT>\n/ items = (',as.character(inq_tri$RT[iR]),',');
+      dz0 <- paste0('<list trial>\n/ items = (',as.character(inq_tri$trial[iR]),',');
+    } else if (iR > 1 && iR < nR){
+      df0 <- paste0(df0,as.character(inq_tri$value[iR]),',');
+      dq0 <- paste0(dq0,as.character(inq_tri$RT[iR]),',');
+      dz0 <- paste0(dz0,as.character(inq_tri$trial[iR]),',');
+    } else if (iR==nR){
+      df0 <- paste0(df0,as.character(inq_tri$value[iR]),')\n/ selectionrate = always\n</list>')
+      dq0 <- paste0(dq0,as.character(inq_tri$RT[iR]),')\n/ selectionrate = always\n</list>')
+      dz0 <- paste0(dz0,as.character(inq_tri$trial[iR]),')\n/ selectionrate = always\n</list>')
     }
-    pdf(paste0('image-',ii,'.pdf'),height=12,width=12)
-    gg1 <- plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii], ss), ylim = range(aa), xaxt='n')
-    axis(side = 1, at = seq(1, 360, by=30), labels= loc[seq(1, 360, by=30)])
-    print(gg1)
-    dev.off()
+    if ((iR %% 1000)==0){
+      print(iR/nR);
+    }
+  }
+  write.table(df0,'values-5888.txt',row.names=F,col.names=F,quote=F)
+  write.table(dq0,'RTs-5888.txt',row.names=F,col.names=F,quote=F)
+  write.table(dz0,'trials-5888.txt',row.names=F,col.names=F,quote=F)
+  options("encoding" = "native.enc") # change encoding back to native
+  
+  
+  # write erasure schedule
+  era_loc <- zero_to_2pi((tt$erasure_segments$segment_max+tt$erasure_segments$segment_min)/2)*180/pi
+  trial_type <- tt$erasure_segments$trial_type
+  options("encoding" = "UTF-8")
+  df0 <- NULL;
+  dq0 <- NULL;
+  nR <- length(era_loc);
+  for (iR in 1:nR){
+    
+    if (is.na(era_loc[iR])){
+      temp <- 'NULL';
+    } else {
+      temp <- era_loc[iR];
+    }
+    
+    if (iR==1){
+      df0 <- paste0('<list erasure_locations>\n/ items = (',as.character(temp[iR]),',');
+      dq0 <- paste0('<list trial_type>\n/ items = ("',as.character(trial_type[iR]),'",');
+    } else if (iR > 1 && iR < nR){
+      df0 <- paste0(df0,as.character(temp[iR]),',');
+      dq0 <- paste0(dq0,'"',as.character(trial_type[iR]),'"');
+    } else if (iR==nR){
+      df0 <- paste0(df0,as.character(temp[iR]),')\n/ selectionrate = always\n/ selectionmode = values.trial;\n</list>')
+      dq0 <- paste0(dq0,'"',as.character(trial_type[iR]),'")\n/ selectionrate = always\n/ selectionmode = values.trial;\n</list>')
+    }
+  }
+  write.table(df0,'era_loc-5888.txt',row.names=F,col.names=F,quote=F)
+  write.table(dq0,'trial_type-5888.txt',row.names=F,col.names=F,quote=F)
+  options("encoding" = "native.enc") # change encoding back to native
+  
+  
+  
+  
+  
+  if (animate==TRUE){
+    loc <- round(tt$get_pvec(), 2)
+    setwd('~/clock2/animation/')
+    for (ii in 1:nrow(aa)) {
+      if (tt$erasure_segments$trial_type[ii] == "erasure") {
+        ss <- paste(", er:", round(tt$erasure_segments[ii,"segment_min"], 2))
+      } else {
+        ss <- ""
+      }
+      pdf(paste0('image-',ii,'.pdf'),height=12,width=12)
+      gg1 <- plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii], ss), ylim = range(aa), xaxt='n')
+      axis(side = 1, at = seq(1, 360, by=30), labels= loc[seq(1, 360, by=30)])
+      print(gg1)
+      dev.off()
+    }
   }
   
   
   
-
-  } else {
+} else {
   
   #for (f in 1:niterations) {
   for (f in 1:2) {
