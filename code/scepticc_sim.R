@@ -28,17 +28,17 @@ parallel = F
 #                    #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
 #                    iteration = 10:niterations)
 
-
+iterations <- c(5888, 8395)
 # find more good seeds for contingencies
-rob_grid <- expand.grid(alpha = c(.1, .5), gamma = c(.5, .9),                 # model params
-                        beta = c(1, 5), # at very high betas, h and u are decorrelated, no need to test
-                        epsilon_u = c(0.0833, 0.33, 0.99), # 0.0833 is at chance, low correlation -- not worth testing
+rob_grid <- expand.grid(alpha = c(.5), gamma = c(.5),                 # model params
+                        beta = c(1), # at very high betas, h and u are decorrelated, no need to test
+                        epsilon_u = c(0.9), # 0.0833 is at chance, low correlation -- not worth testing
                         block_length = c(10), # block length > 15 had higher correlations, not worth testing
-                        low_avg = c(20),
+                        low_avg = c(10),
                         # iteration = c(1:1000),
                         iteration = iterations,
                         #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
-                        seed = 1:50)
+                        seed = 1:10)
 
 # since child environments inside workers do not inherit R6 objects, source them once per worker
 # thus, need to loop over only a hundred dataframes
@@ -106,7 +106,7 @@ iterate_sim <- function(df, bump_prominence, ncenters, centers, values, width_sd
              save.image(file=sprintf("flex_error_state_%d_%d.RData", i, j))
              return(NULL)
            })
-  tryCatch(tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1, block_length = df$block_length[i]),
+  tryCatch(tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 2, block_length = df$block_length[i]),
            error = function(e) {
              print(e)
              save.image(file=sprintf("erasure_error_state_%d_%d.RData", i, j))
@@ -131,7 +131,8 @@ iterate_sim <- function(df, bump_prominence, ncenters, centers, values, width_sd
   spread <- tt$spread
   d <- cbind(learning_history, h, spread)
   d <- d %>% inner_join(tt$erasure_segments) %>% mutate(
-    u = trial_type == "erasure" & segment_shown)
+    u = trial_type == "erasure" & segment_shown,
+    a = trial_type == "attention" & segment_shown)
   # browser()
   # if (sanity_checks) {
   #   v <- tt$get_values_matrix(type = "objective")
@@ -143,6 +144,7 @@ iterate_sim <- function(df, bump_prominence, ncenters, centers, values, width_sd
   #     scale_color_viridis_b()
   # } # for debugging only
   r <- cor(d$h, d$u, use = "complete.obs", method = "spearman")
+  # ra <- cor(d$h, d$a, use = "complete.obs", method = "spearman")
   # u_sampled <- sum(d$in_segment)
   # browser()
   results <- as.data.frame(cbind(df[i,], r))
