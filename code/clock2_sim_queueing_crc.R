@@ -64,6 +64,10 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   ntrials = 300
   i = 1
   j = 1
+  bump_prominence <- 10
+  bump_value <- mean_val * bump_prominence
+  bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
+  setwd(base_dir)
   tt <- iterate_sim(df, bump_prominence, ncenters, centers, values, width_sd, i, j)
   
   values <- data.frame(round(t(tt$get_values_matrix())),0)
