@@ -79,11 +79,10 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   
   inq_tri <- round(tt$get_values_matrix("objective", quiet=F),0) # all manipulations, matrix of expected values
   aa <- inq_tri
-  inq_tri <- data.frame(inq_val)
+  inq_tri <- data.frame(t(inq_val)) # must transpose here!! 2023-10-26 AndyP
   inq_tri <- inq_tri %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = extract_numeric(RT))
   inq_tri <- inq_tri %>% arrange(trial,RT)
   
-
   # generate value, RT and trial lists as 1 x (nT x nRT) inquisit lists
   options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
   df0 <- NULL;
