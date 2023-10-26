@@ -64,6 +64,10 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   ntrials = 300
   i = 1
   j = 1
+  bump_prominence <- 10
+  bump_value <- mean_val * bump_prominence
+  bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
+  setwd(base_dir)
   tt <- iterate_sim(df, bump_prominence, ncenters, centers, values, width_sd, i, j)
   
   values <- data.frame(round(t(tt$get_values_matrix())),0)
@@ -75,11 +79,10 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   
   inq_tri <- round(tt$get_values_matrix("objective", quiet=F),0) # all manipulations, matrix of expected values
   aa <- inq_tri
-  inq_tri <- data.frame(inq_val)
+  inq_tri <- data.frame(t(inq_val)) # must transpose here!! 2023-10-26 AndyP
   inq_tri <- inq_tri %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = extract_numeric(RT))
   inq_tri <- inq_tri %>% arrange(trial,RT)
   
-
   # generate value, RT and trial lists as 1 x (nT x nRT) inquisit lists
   options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
   df0 <- NULL;
