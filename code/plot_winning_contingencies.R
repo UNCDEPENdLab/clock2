@@ -21,8 +21,8 @@ require(utils)
 
 iterations <- c(5888, 8395)
 # find more good seeds for contingencies
-df <- expand.grid(alpha = c(.1, .9), gamma = c(.1, .9),                 # model params
-                  beta = c(1, 5), # at very high betas, h and u are decorrelated, no need to test
+df <- expand.grid(alpha = c(.1, .3, .6), gamma = c(.1, .3, .6),                 # model params
+                  beta = c(3, 10), # at very high betas, h and u are decorrelated, no need to test
                   epsilon_u = c(0.0833, 0.3, 0.9), # 0.0833 is at chance, low correlation -- not worth testing
                   block_length = c(10), # block length > 15 had higher correlations, not worth testing
                   low_avg = c(10),
@@ -116,7 +116,7 @@ for (i in 1:nrow(df)) {
   print(ggplot(d) + geom_line( aes(x=trial, y=h*3)) + geom_point(aes(x = trial, y = choice, color = outcome)) +
           scale_color_viridis_b() + geom_segment(aes(x = trial, xend = trial, y = segment_min, yend = segment_max, alpha = u)) + 
           theme_minimal() + ylab("Location") + geom_text(aes(x = -5, y = 9, label = "Entropy"), angle = 90) +
-          geom_text(aes(trial, vmax, label = "$"), color = "red", alpha = 0.3) +
+          geom_text(aes(trial, vmax, label = "$", size = spread), color = "red", alpha = 0.2) +
           geom_label(aes(x = 200, y = 11, label = sprintf(paste0("epsilon_u=", sceptic_agent$epsilon_u, ", gamma=", sceptic_agent$gamma,  ", alpha=", sceptic_agent$alpha, ", beta=", sceptic_agent$beta,  ", r=",round(r,2), ", tot. points=", round(sum(d$outcome),0))))))
   dev.off()
   # Sys.sleep(1)
