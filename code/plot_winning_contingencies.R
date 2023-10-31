@@ -19,11 +19,19 @@ require(utils)
 #                    #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
 #                    iteration = 10:niterations)
 
-iterations <- c(5888, 8395)
+
+top100 <- c(8014, 8395, 5629, 5966, 6791, 5888, 2455, 3069, 7319, 6820, 2231, 4223, 7369, 8093, 6623, 5643, 7435, 8396, 6604, 
+            8437, 5891, 8272, 8257, 5075, 5119, 5612, 8451, 8280, 7674, 5986, 4753, 3711, 7191, 6255, 5077, 5422, 5329, 8304, 6419, 4268, 
+            7913, 3795, 5650, 4175, 5670, 2004, 7937, 4660, 7547, 2048, 6449, 6108, 7712, 8312, 5991, 2526, 2229, 8195, 7709, 5179, 5360, 
+            7590, 6642, 3703, 7860, 7106, 7967, 3073, 5343, 4182, 5136, 8448, 7994, 7230, 5825, 6313, 5484, 6177, 8332, 4463, 6432, 5560, 
+            8706, 8566, 3374, 3655, 2176, 3102, 6136, 7163, 7315, 2604, 4425, 8712, 6831, 6436, 7350, 4505, 3769, 6294)
+
+
+iterations <- c(8014)
 # find more good seeds for contingencies
-df <- expand.grid(alpha = c(.1, .3, .6), gamma = c(.1, .3, .6),                 # model params
-                  beta = c(3, 10), # at very high betas, h and u are decorrelated, no need to test
-                  epsilon_u = c(0.0833, 0.3, 0.9), # 0.0833 is at chance, low correlation -- not worth testing
+df <- expand.grid(alpha = c(.1), gamma = c(.3),                 # model params
+                  beta = c(3), # at very high betas, h and u are decorrelated, no need to test
+                  epsilon_u = c(0.9), # 0.0833 is at chance, low correlation -- not worth testing
                   block_length = c(10), # block length > 15 had higher correlations, not worth testing
                   low_avg = c(10),
                   # iteration = c(1:1000),
@@ -34,6 +42,7 @@ print(paste0("Evaluating ", nrow(df), " rows"))
 
 for (i in 1:nrow(df)) {
   set.seed(df$iteration[i])
+  j = 1
   ncenters <- 9 # how many gaussians there are
   mean_val <- 10 # mean reward rate
   sd_val <- 2 # standard deviation of reward / range of rewards
