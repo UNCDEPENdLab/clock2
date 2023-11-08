@@ -558,6 +558,9 @@ troll_world <- R6::R6Class(
     },
     get_choices = function() {
       private$pvt_choices
+    },
+    get_drift_vec = function() {
+      private$pvt_drift_vec
     }
   )
 )
