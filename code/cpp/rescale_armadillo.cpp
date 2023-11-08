@@ -30,8 +30,10 @@ arma::rowvec rescale_armadillo(arma::rowvec x, double to_l, double to_h)
  b1 <- scales::rescale(v, to=c(5,15))
  b2 <- rescale_armadillo(v, 5, 15)
  identical(b1, b2)
+ 
+ #Approx 3x speedup
  microbenchmark::microbenchmark(
-  cpp = rescale(v, 5, 15),
+  cpp = rescale_armadillo(v, 5, 15),
   r = scales::rescale(v, to=c(5,15)),
   times=50000
  )
