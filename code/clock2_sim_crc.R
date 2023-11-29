@@ -1,7 +1,11 @@
 library(R6)
 library(tidyverse)
 
+<<<<<<< Updated upstream
 test_high_uncertainty = TRUE
+=======
+get_max_erasures = TRUE;
+>>>>>>> Stashed changes
 
 if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   base_dir <- "~/clock2/code/"
@@ -18,11 +22,12 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
 }
 
 iterate_sim <- function(df, bump_prominence, ncenters, centers, values, width_sd, i, j) {
-  if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
+  if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1 && get_max_erasures==FALSE)  {
     contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians")
     tt <- troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=1)
     tt$apply_flex(high_avg = 1, high_spread = 0, low_avg = df$low_avg[i], spread_max = 100, jump_high = T)
     tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 2, block_length = df$block_length[i])
+<<<<<<< Updated upstream
     
     if (test_high_uncertainty){
       sceptic_agent <- scepticc$new(n_basis=12, n_points=200, contingency=tt)
@@ -35,6 +40,20 @@ iterate_sim <- function(df, bump_prominence, ncenters, centers, values, width_sd
       sceptic_agent$run_contingency(optimize = FALSE)
     }
     
+=======
+  } else if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1 && get_max_erasures==TRUE) {
+    contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians")
+    tt <- troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=1)
+    tt$apply_flex(high_avg = 1, high_spread = 0, low_avg = df$low_avg[i], spread_max = 100, jump_high = T)
+    tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 2, block_length = df$block_length[i])
+    sceptic_agent <- scepticc$new(n_basis=12, n_points=200, contingency=tt)
+    sceptic_agent$alpha <- alpha <- df$alpha[i]
+    sceptic_agent$beta <- beta <- df$beta[i]
+    sceptic_agent$gamma <- gamma <- df$gamma[i]
+    sceptic_agent$epsilon_u <- epsilon_u <- df$epsilon_u[i]
+    set.seed(df$seed[i])
+    learning_history <- sceptic_agent$run_contingency(optimize = FALSE)
+>>>>>>> Stashed changes
   } else {
     set.seed(df$iteration[i])
     ncenters <- 9 # how many gaussians there are

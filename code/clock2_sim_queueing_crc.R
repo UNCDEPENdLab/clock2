@@ -16,7 +16,12 @@ if (sum(stringr::str_detect(Sys.info(), "Alex|alexdombrovski"))>1) {
 }
 test <- F
 test_on_mac <- F
+<<<<<<< Updated upstream
 animate <- T
+=======
+generate_inquisit_lists <- F
+animate <- F
+>>>>>>> Stashed changes
 # if (test && test_on_mac) {
 #   basedir <- "~/OneDrive - University of Pittsburgh/Momentum_EMA/eeg_data_t_split/"
 #   output_dir <- "~/OneDrive - University of Pittsburgh/Momentum_EMA/"
@@ -29,7 +34,11 @@ generate_inquisit_lists <- F
 if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   rob_grid <- expand.grid(alpha = c(0.2), gamma = c(0.1),                 # model params
                           beta = c(1), # at very high betas, h and u are decorrelated, no need to test
+<<<<<<< Updated upstream
                           epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
+=======
+                          epsilon_u = c(0.99), # 0.0833 is at chance, low correlation -- not worth testing
+>>>>>>> Stashed changes
                           block_length = c(10), # block length > 15 had higher correlations, not worth testing
                           low_avg = c(10),
                           iteration = c(2455),
@@ -71,6 +80,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
   setwd(base_dir)
   tt <- iterate_sim(df, bump_prominence, ncenters, centers, values, width_sd, i, j)
+<<<<<<< Updated upstream
   bb <- tt
   cc <- round(bb$get_values_matrix(),0) 
   rm(tt)
@@ -113,6 +123,47 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     epoch <- data.frame(qq$epoch)
     write.csv(epoch,'epoch-2455.csv')
     
+=======
+  aa <- tt$get_values_matrix()
+  
+  if (generate_inquisit_lists == TRUE){
+    bb <- tt
+    rm(tt)
+    
+    set.seed(df$iteration[i])
+    ncenters <- 9 # how many gaussians there are
+    mean_val <- 10 # mean reward rate
+    sd_val <- 2 # standard deviation of reward / range of rewards
+    centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
+    values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
+    width_sd <- 20 # fixed, how wide are the underlying Gaussians
+    sanity_checks = T # diagnostic plots inside simulation loop
+    ntrials = 300
+    i = 1;
+    j = 1;
+    cat(sprintf("In loop i: %d, j: %d\n", i, j), file = "run_log.txt", append=T)
+    # set up contingency
+    bump_prominence <- 10
+    bump_value <- mean_val * bump_prominence
+    bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
+    setwd(base_dir)
+    contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians")
+    qq <- troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=1)
+    qq$apply_flex(high_avg = 1, high_spread = 0, low_avg = df$low_avg[i], spread_max = 100, jump_high = T)
+    values <- data.frame(round(t(qq$get_values_matrix())),0)
+    #values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial")
+    values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial") %>%
+      mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
+                                                                               vmax_location = timepoint[which.max(value)])
+    plot(values$vmax_location)
+    
+    inq_tri <- round(qq$get_values_matrix(),0) # original value matrix
+    aa <- inq_tri
+    inq_tri <- data.frame(inq_tri)
+    inq_tri <- inq_tri %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = extract_numeric(RT))
+    inq_tri <- inq_tri %>% arrange(trial,RT)
+    
+>>>>>>> Stashed changes
     setwd('~/clock2')
     # generate value, RT and trial lists as 1 x (nT x nRT) inquisit lists
     options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
@@ -136,6 +187,66 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
       }
       if ((iR %% 1000)==0){
         print(iR/nR);
+<<<<<<< Updated upstream
+=======
+      }
+    }
+    write.table(df0,'values-2455.txt',row.names=F,col.names=F,quote=F)
+    write.table(dq0,'RTs-2455.txt',row.names=F,col.names=F,quote=F)
+    write.table(dz0,'trials-2455.txt',row.names=F,col.names=F,quote=F)
+    options("encoding" = "native.enc") # change encoding back to native
+    
+    
+    # write erasure schedule
+    era_loc <- zero_to_2pi((bb$erasure_segments$segment_max+bb$erasure_segments$segment_min)/2)*180/pi
+    trial_type <- bb$erasure_segments$trial_type
+    spread <- bb$spread
+    options("encoding" = "UTF-8")
+    df0 <- NULL;
+    dq0 <- NULL;
+    dz0 <- NULL;
+    nR <- length(era_loc);
+    for (iR in 1:nR){
+      
+      if (is.na(era_loc[iR])){
+        temp <- 'NULL';
+      } else {
+        temp <- era_loc[iR];
+      }
+      
+      if (iR==1){
+        df0 <- paste0('<list erasure_locations>\n/ items = (',as.character(temp),',');
+        dq0 <- paste0('<list trial_type>\n/ items = ("',as.character(trial_type[iR]),'",');
+        dz0 <- paste0('<list spread>\n/ items = (',as.character(spread[iR]),',');
+      } else if (iR > 1 && iR < nR){
+        df0 <- paste0(df0,as.character(temp),',');
+        dq0 <- paste0(dq0,'"',as.character(trial_type[iR]),'",');
+        dz0 <- paste0(dz0,as.character(spread[iR]),',');
+      } else if (iR==nR){
+        df0 <- paste0(df0,as.character(temp),')\n/ selectionrate = always\n/ selectionmode = values.trial;\n</list>')
+        dq0 <- paste0(dq0,'"',as.character(trial_type[iR]),'")\n/ selectionrate = always\n/ selectionmode = values.trial;\n</list>')
+        dz0 <- paste0(dz0,as.character(spread[iR]),')\n/ selectionrate = always\n/ selectionmode = values.trialCount;\n</list>')
+      }
+    }
+    write.table(df0,'era_loc-2455.txt',row.names=F,col.names=F,quote=F)
+    write.table(dq0,'trial_type-2455.txt',row.names=F,col.names=F,quote=F)
+    write.table(dz0,'spread-2455.txt',row.names=F,col.names=F,quote=F)
+    options("encoding" = "native.enc") # change encoding back to native
+    
+    
+    
+  } 
+  
+  
+  if (animate==TRUE){
+    loc <- round(tt$get_pvec(), 2)
+    setwd('~/clock2/animation/')
+    for (ii in 1:nrow(aa)) {
+      if (tt$erasure_segments$trial_type[ii] == "erasure") {
+        ss <- paste(", er:", round(tt$erasure_segments[ii,"segment_min"], 2))
+      } else {
+        ss <- ""
+>>>>>>> Stashed changes
       }
     }
     write.table(df0,'values-2455.txt',row.names=F,col.names=F,quote=F)
