@@ -14,6 +14,7 @@ if (sum(stringr::str_detect(Sys.info(), "Alex|alexdombrovski"))>1) {
   output_dir <- "~/code/clock2/simulations"
   sbatch_dir <- "~/code/clock2/code/sbatch/"
 }
+
 test <- F
 test_on_mac <- F
 animate <- T
@@ -23,7 +24,7 @@ animate <- T
 # }
 setwd(output_dir)
 silent <- F
-generate_inquisit_lists <- F
+generate_inquisit_lists <- T
 
 # set up simulation grid, write files
 if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
@@ -32,7 +33,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
                           epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
                           block_length = c(10), # block length > 15 had higher correlations, not worth testing
                           low_avg = c(10),
-                          iteration = c(2455),
+                          iteration = c(6820),
                           #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
                           seed = 1)
 } else {
@@ -109,7 +110,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     inq_tri <- data.frame(inq_tri)
     inq_tri <- inq_tri %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = extract_numeric(RT))
     inq_tri <- inq_tri %>% arrange(trial,RT)
-    write.csv(inq_tri,'Design-Matrix-2455.csv')
+    write.csv(inq_tri,'Design-Matrix-6820.csv')
     epoch <- data.frame(qq$epoch)
     write.csv(epoch,'epoch-2455.csv')
     
@@ -138,9 +139,9 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
         print(iR/nR);
       }
     }
-    write.table(df0,'values-2455.txt',row.names=F,col.names=F,quote=F)
-    write.table(dq0,'RTs-2455.txt',row.names=F,col.names=F,quote=F)
-    write.table(dz0,'trials-2455.txt',row.names=F,col.names=F,quote=F)
+    write.table(df0,'values-6820.txt',row.names=F,col.names=F,quote=F)
+    write.table(dq0,'RTs-6820.txt',row.names=F,col.names=F,quote=F)
+    write.table(dz0,'trials-6820.txt',row.names=F,col.names=F,quote=F)
     options("encoding" = "native.enc") # change encoding back to native
     
     
@@ -175,9 +176,9 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
         dz0 <- paste0(dz0,as.character(drift[iR]),')\n/ selectionrate = always\n/ selectionmode = values.trial; \n</list>')
       }
     }
-    write.table(df0,'era_loc-2455.txt',row.names=F,col.names=F,quote=F)
-    write.table(dq0,'trial_type-2455.txt',row.names=F,col.names=F,quote=F)
-    write.table(dz0,'drift-vector-2455.txt',row.names=F,col.names=F,quote=F)
+    write.table(df0,'era_loc-6820.txt',row.names=F,col.names=F,quote=F)
+    write.table(dq0,'trial_type-6820.txt',row.names=F,col.names=F,quote=F)
+    write.table(dz0,'drift-vector-6820.txt',row.names=F,col.names=F,quote=F)
     options("encoding" = "native.enc") # change encoding back to native
     
   }
