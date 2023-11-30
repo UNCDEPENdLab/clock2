@@ -112,7 +112,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     inq_tri <- inq_tri %>% arrange(trial,RT)
     write.csv(inq_tri,'Design-Matrix-6820.csv')
     epoch <- data.frame(qq$epoch)
-    write.csv(epoch,'epoch-2455.csv')
+    write.csv(epoch,'epoch-6820.csv')
     
     setwd('~/clock2')
     # generate value, RT and trial lists as 1 x (nT x nRT) inquisit lists
