@@ -149,10 +149,12 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     era_loc <- zero_to_2pi((bb$erasure_segments$segment_max+bb$erasure_segments$segment_min)/2)*180/pi
     trial_type <- bb$erasure_segments$trial_type
     drift <- bb$get_drift_vec()
+    spread <- bb$spread
     options("encoding" = "UTF-8")
     df0 <- NULL;
     dq0 <- NULL;
     dz0 <- NULL;
+    dh0 <- NULL;
     nR <- length(era_loc);
     for (iR in 1:nR){
       
@@ -166,19 +168,23 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
         df0 <- paste0('<list erasure_locations>\n/ items = (',as.character(temp),',');
         dq0 <- paste0('<list trial_type>\n/ items = ("',as.character(trial_type[iR]),'",');
         dz0 <- paste0('<list drift>\n/ items = (',as.character(drift[iR]),',');
+        dh0 <- paste0('<list spread>\n/ items = (',as.character(spread[iR]),',');
       } else if (iR > 1 && iR < nR){
         df0 <- paste0(df0,as.character(temp),',');
         dq0 <- paste0(dq0,'"',as.character(trial_type[iR]),'",');
         dz0 <- paste0(dz0,as.character(drift[iR]),',');
+        dh0 <- paste0(dh0,as.character(spread[iR]),',');
       } else if (iR==nR){
         df0 <- paste0(df0,as.character(temp),')\n/ selectionrate = always\n/ selectionmode = values.era_loc_index;\n</list>')
         dq0 <- paste0(dq0,'"',as.character(trial_type[iR]),'")\n/ selectionrate = always\n/ selectionmode = values.trial;\n</list>')
         dz0 <- paste0(dz0,as.character(drift[iR]),')\n/ selectionrate = always\n/ selectionmode = values.trial; \n</list>')
+        dh0 <- paste0(dh0,as.character(spread[iR]),')\n/ selectionrate = always\n/ selectionmode = values.trial; \n</list>')
       }
     }
     write.table(df0,'era_loc-6820.txt',row.names=F,col.names=F,quote=F)
     write.table(dq0,'trial_type-6820.txt',row.names=F,col.names=F,quote=F)
     write.table(dz0,'drift-vector-6820.txt',row.names=F,col.names=F,quote=F)
+    write.table(dh0,'spread-6820.txt',row.names=F,col.names=F,quote=F)
     options("encoding" = "native.enc") # change encoding back to native
     
   }
