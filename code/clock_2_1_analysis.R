@@ -5,20 +5,37 @@ library(tidyverse)
 library(data.table)
 library(lme4)
 library(BAMBI)
-design_file <- '/Users/andypapale/clock2/Design-Matrix-2455.csv'
-design <- read_csv(design_file)
-design <- design %>% group_by(trial) %>% summarise(vmax = max(value),
+design_file1 <- '/Users/andypapale/clock2/Design-Matrix-2455.csv'
+design1 <- read_csv(design_file)
+design1 <- design1 %>% group_by(trial) %>% summarise(vmax = max(value),
                                             vmax_location = RT[which.max(value)])
+design1 <- design1 %>% mutate(seed = rep(2455,nrow(design1)))
 
+design_file2 <- '/Users/andypapale/clock2/Design-Matrix-6820.csv'
+design2 <- read_csv(design_file)
+design2 <- design2 %>% group_by(trial) %>% summarise(vmax = max(value),
+                                                     vmax_location = RT[which.max(value)])
+design2 <- design2 %>% mutate(seed = rep(6820,nrow(design2)))
 
-epoch_file <- '/Users/andypapale/clock2/epoch-2455.csv'
-epoch <- read_csv(epoch_file)
-epoch <- epoch %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
-epoch <- epoch %>% mutate(epoch_bin = rep(1:50, each=6)) # just do every 10 trials for now
+design <- rbind(design1, design2)
 
-design <- inner_join(design,epoch,by='trial')
+epoch_file1 <- '/Users/andypapale/clock2/epoch-2455.csv'
+epoch1 <- read_csv(epoch_file)
+epoch1 <- epoch1 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
+epoch1 <- epoch1 %>% mutate(epoch_bin = rep(1:50, each=6)) # just do every 10 trials for now
+epoch1 <- epoch1 %>% mutate(seed = rep(2455,nrow(epoch1)))
 
-df1 <- read_csv('/Users/andypapale/clock2/pilot_data/papalea_prosper_clock_2_1_1_raw_2312012009.csv')
+epoch_file2 <- '/Users/andypapale/clock2/epoch-6820.csv'
+epoch2 <- read_csv(epoch_file)
+epoch2 <- epoch2 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
+epoch2 <- epoch2 %>% mutate(epoch_bin = rep(1:50, each=6)) # just do every 10 trials for now
+epoch2 <- epoch2 %>% mutate(seed = rep(6820,nrow(epoch2)))
+
+epoch <- rbind(epoch1,epoch2)
+
+design <- inner_join(design,epoch,by=c('trial','seed'))
+
+df1 <- read_csv('/Users/andypapale/clock2/pilot_data/papalea_prosper_clock_2_1_1_raw_2312012338.csv')
 df1 <- df1 %>% filter(trialcode == 'feedback')
 df1 <- df1 %>% mutate(u_present = case_when(trial_type == 'erasure' ~ TRUE,
                                             trial_type != 'erasure' ~ FALSE),
@@ -30,7 +47,7 @@ df1 <- df1 %>% mutate(u_present = case_when(trial_type == 'erasure' ~ TRUE,
                       
 df1$trial <- df1$trial...18 # can make this step not necessary in final program
 
-df1 <- inner_join(df1,design,by='trial')
+df1 <- inner_join(df1,design,by=c('trial','seed'))
 df1 <- df1 %>% mutate(resp_theta = pos_shifted * pi/180,
                       resp_theta_c = zero_to_2pi(resp_theta),
                       vmax_theta = vmax_location * pi/180,
@@ -59,9 +76,11 @@ ggplot(df1, aes(x=trial,y=minuspi_to_pi(resp_theta_c - u_theta_c),color=subject)
 ggplot(df1, aes(x=trial,y=minuspi_to_pi(resp_theta_c - att_theta_c),color=subject)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus att_location')
 ggplot(df1, aes(x=pos_shifted,y=inc_rg)) + facet_wrap(~epoch_bin) + geom_line() + geom_point(aes(color=omission)) + geom_point(aes(x=vmax_loc_mean,y= 150), shape = 2,color='green')
 ggplot(df1, aes(trial, vmax_theta_c, color = vmax)) + geom_line() + scale_color_viridis_c()
-ggplot(design, aes(trial, vmax)) + geom_line() + scale_color_viridis_c()
+ggplot(design, aes(trial, vmax)) + geom_line() + scale_color_viridis_c() + facet_wrap(~seed)
 ggplot(df1,aes(x=trial,y=minuspi_to_pi(resp_theta_c - vmax_theta_c))) + geom_point() + facet_grid(epoch~trial_type) + geom_hline(yintercept = 0) + ggtitle('RT minus vmax_location')
 ggplot(df1,aes(x=trial,y=minuspi_to_pi(resp_theta_c - u_theta_c))) + geom_point() + facet_grid(epoch~trial_type) + geom_hline(yintercept = 0) + ggtitle('RT - u_location')
+
+df1 <- df1 %>% filter(seed==6820)
 
 m1 <- lmerTest::lmer(pos_shifted ~ scale(vmax_location)*scale(vmax) + scale(resp_theta_c_lag)*outcome_lag + (1|subject), df1)
 summary(m1)
