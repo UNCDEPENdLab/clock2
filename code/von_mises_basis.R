@@ -1,7 +1,8 @@
 if (!exists("rcpp_cache_dir")) rcpp_cache_dir <- "~/Rcpp_cache"
-if (!exists("rcpp_source_dir")) rcpp_source_dir <- "~/Data_Analysis/clock2/code/cpp"
 if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1) rcpp_source_dir <- "~/clock2/code/cpp"
-if (sum(stringr::str_detect(Sys.info(), "alexdombrovski"))>1) rcpp_source_dir <- "~/code/clock2/code/cpp"
+if (sum(stringr::str_detect(Sys.info(), "alexdombrovski|ayd1"))>1) {
+  if (!exists("rcpp_source_dir")) rcpp_source_dir <- "~/code/clock2/code/cpp"} else {
+    if (!exists("rcpp_source_dir")) rcpp_source_dir <- "~/Data_Analysis/clock2/code/cpp"}
 # von mises basis function class
 vm_bf <- R6::R6Class(
   "vm_bf",
