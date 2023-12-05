@@ -18,7 +18,7 @@ epoch <- epoch %>% mutate(epoch_bin = rep(1:50, each=6)) # just do every 10 tria
 
 design <- inner_join(design,epoch,by='trial')
 
-df1 <- read_csv('/Users/andypapale/Downloads/papalea_prosper_clock_2_1_1_raw_2312041650.csv')
+df1 <- read_csv('/Users/andypapale/clock2/pilot_data/papalea_prosper_clock_2_1_1_raw_2312020013.csv')
 df1 <- df1 %>% filter(trialcode == 'feedback')
 df1 <- df1 %>% mutate(u_present = case_when(trial_type == 'erasure' ~ TRUE,
                                             trial_type != 'erasure' ~ FALSE),
@@ -53,8 +53,11 @@ df1 <- df1 %>% add_count(epoch_bin, epoch) %>% group_by(epoch_bin) %>% mutate(ep
 
 df1 <- df1 %>% arrange(subject,block,trial)
 
-ggplot(df1, aes(x=trial,y=minuspi_to_pi(resp_theta_c - vmax_theta_c),color=subject, size=inc_rg)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus vmax_location')
-ggplot(df1, aes(x=trial,y=minuspi_to_pi(resp_theta_c - u_theta_c),color=subject)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus u_location')
+pdf('resp-RTvmax.pdf',height=12,width=12)
+gg1 <- ggplot(df1, aes(x=trial,y=minuspi_to_pi(resp_theta_c - vmax_theta_c),color=inc_rg)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus vmax_location')
+print(gg1)
+dev.off()
+ggplot(df1, aes(x=trial,y=minuspi_to_pi(resp_theta_c - u_theta_c),color=subject,size=inc_rg)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus u_location')
 ggplot(df1, aes(x=trial,y=minuspi_to_pi(resp_theta_c - att_theta_c),color=subject)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus att_location')
 ggplot(df1, aes(x=pos_shifted,y=inc_rg)) + facet_wrap(~epoch_bin) + geom_line() + geom_point(aes(color=omission)) + geom_point(aes(x=vmax_loc_mean,y= 150), shape = 2,color='green')
 ggplot(df1, aes(trial, vmax_theta_c, color = vmax)) + geom_line() + scale_color_viridis_c()
