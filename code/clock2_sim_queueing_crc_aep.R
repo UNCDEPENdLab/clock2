@@ -24,7 +24,7 @@ animate <- T
 # }
 setwd(output_dir)
 silent <- F
-generate_inquisit_lists <- T
+generate_inquisit_lists <- F
 
 # set up simulation grid, write files
 if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
@@ -63,7 +63,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   sd_val <- 2 # standard deviation of reward / range of rewards
   centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
   values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
-  width_sd <- 20 # fixed, how wide are the underlying Gaussians
+  width_sd <- 0.349 # fixed, how wide are the underlying Gaussians
   sanity_checks = T # diagnostic plots inside simulation loop
   ntrials = 300
   cat(sprintf("In loop i: %d, j: %d\n", i, j), file = "run_log.txt", append=T)
@@ -82,7 +82,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   sd_val <- 2 # standard deviation of reward / range of rewards
   centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
   values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
-  width_sd <- 20 # fixed, how wide are the underlying Gaussians
+  width_sd <- 0.349 # fixed, how wide are the underlying Gaussians
   sanity_checks = T # diagnostic plots inside simulation loop
   ntrials = 300
   i = 1
