@@ -33,7 +33,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
                           epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
                           block_length = c(10), # block length > 15 had higher correlations, not worth testing
                           low_avg = c(10),
-                          iteration = c(6820),
+                          iteration = c(2455),
                           #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
                           seed = 1)
 } else {
@@ -187,19 +187,19 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     write.table(dh0,'spread-6820.txt',row.names=F,col.names=F,quote=F)
     options("encoding" = "native.enc") # change encoding back to native
     
+    era_val = NULL
+    era_loc_last = 0
+    iC = 1;
+    for (iT in 1:300){
+      if (bb$erasure_segments$trial_type[iT] == "erasure" && era_loc_last != era_loc[iT]){
+        era_loc_last = era_loc[iT]
+        print(cc[iT,era_loc[iT]])
+        era_val[iC] = cc[iT,era_loc[iT]];
+        iC = iC + 1;
+      }
+    }  
   }
-  
-  era_val = NULL
-  era_loc_last = 0
-  iC = 1;
-  for (iT in 1:300){
-    if (bb$erasure_segments$trial_type[iT] == "erasure" && era_loc_last != era_loc[iT]){
-      era_loc_last = era_loc[iT]
-      print(cc[iT,era_loc[iT]])
-      era_val[iC] = cc[iT,era_loc[iT]];
-      iC = iC + 1;
-    }
-  }  
+
   
   if (animate==TRUE){
     loc <- round(bb$get_pvec(), 2)
