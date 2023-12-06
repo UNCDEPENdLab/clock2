@@ -8,23 +8,35 @@
 library(tidyverse)
 library(data.table)
 repo_dir <- "~/code/clock2"
-sim_dir <- "~/code/clock2/simulations"
+sim_dir <- "~/code/clock2/simulations/from_crc"
+out_dir <- "~/code/clock2/simulations"
 setwd(sim_dir)
 
-files <- list.files(pattern = "*iteration_crc*") # this is for all contingencies with 100 seeds
+files <- list.files(pattern = "*narrow*") # this is for all contingencies with 100 seeds
 
-df <- files %>% map_dfr(fread)
+library(furrr)
+future::plan(multisession)
+df <- files %>% future_map_dfr(fread)
 dimensions <- names(df %>% select(-r, -seed))
+
+# remove NA seeds/r
+df <- df %>% filter(!is.na(seed))
+# check missingness pattern: no missing cells
+# t <- as_tibble(as.data.frame(table(df$iteration, df$seed))) %>% setNames(c("iteration", "seed", "freq"))
+# setwd(out_dir)
+# pdf("missing_iteration_seeds.pdf", height = 20, width = 30)
+# ggplot(t, aes(as.numeric(seed), freq, color = iteration)) + geom_line()
+# dev.off()
 
 # low_avg = 10 and timeout = 2 generally work best, stick with these
 sdf <- df %>% summarise(.by = all_of(dimensions), r100 = mean(r)) %>% arrange(alpha, gamma, beta, epsilon_u, block_length, timeout, low_avg, iteration)
-write_csv2(sdf, file = paste0("crc_sim_results_low_avg10_timeout2_", length(unique(sdf$iteration)), "_iterations.csv"))
+data.table::fwrite(sdf, file = paste0("crc_sim_results_narrow", length(unique(sdf$iteration)), "_iterations.csv"))
 # best low_avg, iterations
 iterations <- unique(sdf$iteration)
 
 idf <- sdf %>% summarise(.by = c(low_avg, iteration, timeout, epsilon_u), r100 = mean(r100)) %>% filter(epsilon_u == .9) %>% arrange(r100) %>% top_n(-100)
 top100 <- unique(idf$iteration)
-print(paste(top100, collapse=", "), width = 12)
+print(paste(top100, collapse=", "), width = 12) # to paste in plot_winning_contingencies.R
 # just to inspect
 idf %>% select(iteration, r100)
 # effect of parameters
@@ -33,11 +45,20 @@ df %>% summarise(.by = c(gamma, alpha, beta, epsilon_u), r = mean(r)) %>% arrang
 # top 100
 df %>% filter(iteration %in% top100) %>% summarise(.by = c(gamma, alpha, beta, epsilon_u), r = mean(r)) %>% arrange(r)
 
+##############
+# plot top 100
+# and top 10
+##############
+plot_df <- sdf %>% filter(iteration %in% top100[1:10])
+ggplot(plot_df, aes(alpha, r100, color = as.factor(gamma))) + geom_point() + facet_grid(beta~epsilon_u)
+# find seeds with some high correlations
+sdf %>% filter(iteration %in% top100[1:10] & r100>0.4) %>% select(iteration) %>% unique() %>% nrow()
+
 ############
 # top 100 stress-tested with 1000 iterations each, 89 completed/11 crashed
-files77 <- list.files(pattern = "*true_top*") # top 100 with 1000 seeds each
-df77 <- files77 %>% map_dfr(fread)
-dimensions <- names(df77 %>% select(-r, -seed))
+# files77 <- list.files(pattern = "*true_top*") # top 100 with 1000 seeds each
+# df77 <- files77 %>% map_dfr(fread)
+# dimensions <- names(df77 %>% select(-r, -seed))
 
 # low_avg = 10 and timeout = 2 generally work best, stick with these
 sdf77 <- df77 %>% summarise(.by = all_of(dimensions), r1000 = mean(r)) %>% arrange(alpha, gamma, beta, epsilon_u, block_length, timeout, low_avg, iteration)
