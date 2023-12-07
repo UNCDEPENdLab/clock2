@@ -17,7 +17,7 @@ if (sum(stringr::str_detect(Sys.info(), "Alex|alexdombrovski"))>1) {
 
 test <- F
 test_on_mac <- F
-animate <- T
+animate <- F
 # if (test && test_on_mac) {
 #   basedir <- "~/OneDrive - University of Pittsburgh/Momentum_EMA/eeg_data_t_split/"
 #   output_dir <- "~/OneDrive - University of Pittsburgh/Momentum_EMA/"
