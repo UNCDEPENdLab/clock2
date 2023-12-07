@@ -24,7 +24,7 @@ animate <- F
 # }
 setwd(output_dir)
 silent <- F
-generate_inquisit_lists <- F
+generate_inquisit_lists <- T
 
 # set up simulation grid, write files
 if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
@@ -107,12 +107,15 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   aa <- inq_tri
   
   if (generate_inquisit_lists){
+    
+    setwd('/Users/andypapale/clock2/Inquisit_design_files')
+    
     inq_tri <- data.frame(inq_tri)
     inq_tri <- inq_tri %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = extract_numeric(RT))
     inq_tri <- inq_tri %>% arrange(trial,RT)
-    write.csv(inq_tri,'Design-Matrix-6820.csv')
+    write.csv(inq_tri,paste0('Design-Matrix-',as.character(rob_grid$iteration),'.csv'))
     epoch <- data.frame(qq$epoch)
-    write.csv(epoch,'epoch-6820.csv')
+    write.csv(epoch,paste0('epoch-',as.character(rob_grid$iteration),'.csv'))
     
     setwd('~/clock2')
     # generate value, RT and trial lists as 1 x (nT x nRT) inquisit lists
@@ -139,9 +142,9 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
         print(iR/nR);
       }
     }
-    write.table(df0,'values-6820.txt',row.names=F,col.names=F,quote=F)
-    write.table(dq0,'RTs-6820.txt',row.names=F,col.names=F,quote=F)
-    write.table(dz0,'trials-6820.txt',row.names=F,col.names=F,quote=F)
+    write.table(df0,paste0('values-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+    write.table(dq0,paste0('RTs-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+    write.table(dz0,paste0('trials-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
     options("encoding" = "native.enc") # change encoding back to native
     
     
@@ -158,47 +161,100 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     nR <- length(era_loc);
     for (iR in 1:nR){
       
-      if (is.na(era_loc[iR])){
-        temp <- 'NULL';
-      } else {
-        temp <- era_loc[iR];
-      }
+      #if (is.na(era_loc[iR])){
+      #  temp <- 'NULL';
+      #} else {
+      #  temp <- era_loc[iR];
+      #}
       
       if (iR==1){
-        df0 <- paste0('<list erasure_locations>\n/ items = (',as.character(temp),',');
+        #df0 <- paste0('<list erasure_locations>\n/ items = (',as.character(temp),',');
         dq0 <- paste0('<list trial_type>\n/ items = ("',as.character(trial_type[iR]),'",');
         dz0 <- paste0('<list drift>\n/ items = (',as.character(drift[iR]),',');
         dh0 <- paste0('<list spread>\n/ items = (',as.character(spread[iR]),',');
       } else if (iR > 1 && iR < nR){
-        df0 <- paste0(df0,as.character(temp),',');
+        #df0 <- paste0(df0,as.character(temp),',');
         dq0 <- paste0(dq0,'"',as.character(trial_type[iR]),'",');
         dz0 <- paste0(dz0,as.character(drift[iR]),',');
         dh0 <- paste0(dh0,as.character(spread[iR]),',');
       } else if (iR==nR){
-        df0 <- paste0(df0,as.character(temp),')\n/ selectionrate = always\n/ selectionmode = values.era_loc_index;\n</list>')
+        #df0 <- paste0(df0,as.character(temp),')\n/ selectionrate = always\n/ selectionmode = values.era_loc_index;\n</list>')
         dq0 <- paste0(dq0,'"',as.character(trial_type[iR]),'")\n/ selectionrate = always\n/ selectionmode = values.trial;\n</list>')
         dz0 <- paste0(dz0,as.character(drift[iR]),')\n/ selectionrate = always\n/ selectionmode = values.trial; \n</list>')
         dh0 <- paste0(dh0,as.character(spread[iR]),')\n/ selectionrate = always\n/ selectionmode = values.trial; \n</list>')
       }
     }
-    write.table(df0,'era_loc-6820.txt',row.names=F,col.names=F,quote=F)
-    write.table(dq0,'trial_type-6820.txt',row.names=F,col.names=F,quote=F)
-    write.table(dz0,'drift-vector-6820.txt',row.names=F,col.names=F,quote=F)
-    write.table(dh0,'spread-6820.txt',row.names=F,col.names=F,quote=F)
+    #write.table(df0,paste0('era_loc-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+    write.table(dq0,paste0('trial_type-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+    write.table(dz0,paste0('drift-vector-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+    write.table(dh0,paste0('spread-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
     options("encoding" = "native.enc") # change encoding back to native
     
     era_val = NULL
+    era_loc1 = NULL
+    att_loc = NULL
     era_loc_last = 0
+    att_loc_last = 0
     iC = 1;
+    iD = 1;
     for (iT in 1:300){
-      if (bb$erasure_segments$trial_type[iT] == "erasure" && era_loc_last != era_loc[iT]){
+      if (bb$erasure_segments$trial_type[iT] == "erasure" && (era_loc_last != era_loc[iT] || iT-iP > 4)){
         era_loc_last = era_loc[iT]
-        print(cc[iT,era_loc[iT]])
+        iP = iT;
+        #print(cc[iT,era_loc[iT]])
         era_val[iC] = cc[iT,era_loc[iT]];
+        era_loc1[iC] = era_loc[iT];
         iC = iC + 1;
       }
+      if (bb$erasure_segments$trial_type[iT] == "attention" && (att_loc_last != era_loc[iT] || iT-iQ > 10)){
+        att_loc_last = era_loc[iT]
+        iQ = iT;
+        att_loc[iD] = era_loc[iT]
+        iD = iD + 1;
+      }
     }  
+    
+    options("encoding" = "UTF-8")
+    dq0 <- NULL;
+    dh0 <- NULL;
+    nR <- length(era_loc1);
+    for (iR in 1:nR){
+      if (iR==1){
+        dq0 <- paste0('<list era_loc>\n/ items = ("',as.character(era_loc1[iR]),'",');
+        dh0 <- paste0('<list era_val>\n/ items = (',as.character(era_val[iR]),',');
+      } else if (iR > 1 && iR < nR){
+        dq0 <- paste0(dq0,'"',as.character(era_loc1[iR]),'",');
+        dh0 <- paste0(dh0,as.character(era_val[iR]),',');
+      } else if (iR==nR){
+        dq0 <- paste0(dq0,'"',as.character(era_loc1[iR]),'")\n/ selectionrate = always\n/ selectionmode = values.era_index;\n</list>')
+        dh0 <- paste0(dh0,as.character(era_val[iR]),')\n/ selectionrate = always\n/ selectionmode = values.era_index; \n</list>')
+      }
+    }
+    write.table(dq0,paste0('era_loc-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+    write.table(dh0,paste0('era_val-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+    options("encoding" = "native.enc") # change encoding back to native
+    
+    options("encoding" = "UTF-8")
+    dq0 <- NULL;
+    nR <- length(att_loc);
+    for (iR in 1:nR){
+      if (iR==1){
+        dq0 <- paste0('<list att_loc>\n/ items = ("',as.character(att_loc[iR]),'",');
+      } else if (iR > 1 && iR < nR){
+        dq0 <- paste0(dq0,'"',as.character(att_loc[iR]),'",');
+      } else if (iR==nR){
+        dq0 <- paste0(dq0,'"',as.character(att_loc[iR]),'")\n/ selectionrate = always\n/ selectionmode = values.att_index;\n</list>')
+      }
+    }
+    write.table(dq0,paste0('att_loc-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+    options("encoding" = "native.enc") # change encoding back to native
+    
+    
   }
+  
+  
+  
+  
 
   
   if (animate==TRUE){
