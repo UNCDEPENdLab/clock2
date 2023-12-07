@@ -1,0 +1,5 @@
+<list era_val>
+/ items = (7,5,29,9,119,7,7,8,5,119,36,8,1,2,12,1,68,10,1,4,4,117,15,95,2,9,152,5,43)
+/ selectionrate = always
+/ selectionmode = values.era_index; 
+</list>

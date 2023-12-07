@@ -1,0 +1,5 @@
+<list era_loc>
+/ items = (146,258,280,256,168,153,222,262,286,249,235,147,185,205,172,178,241,150,153,47,158,252,184,206,144,194,259,21,141)
+/ selectionrate = always
+/ selectionmode = values.era_index;
+</list>

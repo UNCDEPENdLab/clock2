@@ -33,7 +33,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
                           epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
                           block_length = c(10), # block length > 15 had higher correlations, not worth testing
                           low_avg = c(10),
-                          iteration = c(6520),
+                          iteration = c(152),
                           #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
                           seed = 1)
 } else {
@@ -51,7 +51,7 @@ niterations <- length(idf_list)
 for (f in 1:niterations) {data.table::fwrite(idf_list[[f]], file = paste0("grid_", f, ".csv"))}
 
 if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
-  source('~/clock2/code/clock2_sim_crc.R')
+  source('~/clock2/code/clock2_sim_crc_aep.R')
   setwd(output_dir)
   i = 1
   j = 1
@@ -117,7 +117,6 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     epoch <- data.frame(qq$epoch)
     write.csv(epoch,paste0('epoch-',as.character(rob_grid$iteration),'.csv'))
     
-    setwd('~/clock2')
     # generate value, RT and trial lists as 1 x (nT x nRT) inquisit lists
     options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
     df0 <- NULL;
@@ -220,13 +219,13 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     nR <- length(era_loc1);
     for (iR in 1:nR){
       if (iR==1){
-        dq0 <- paste0('<list era_loc>\n/ items = ("',as.character(era_loc1[iR]),'",');
+        dq0 <- paste0('<list era_loc>\n/ items = (',as.integer(era_loc1[iR]),',');
         dh0 <- paste0('<list era_val>\n/ items = (',as.character(era_val[iR]),',');
       } else if (iR > 1 && iR < nR){
-        dq0 <- paste0(dq0,'"',as.character(era_loc1[iR]),'",');
+        dq0 <- paste0(dq0,as.integer(era_loc1[iR]),',');
         dh0 <- paste0(dh0,as.character(era_val[iR]),',');
       } else if (iR==nR){
-        dq0 <- paste0(dq0,'"',as.character(era_loc1[iR]),'")\n/ selectionrate = always\n/ selectionmode = values.era_index;\n</list>')
+        dq0 <- paste0(dq0,as.integer(era_loc1[iR]),')\n/ selectionrate = always\n/ selectionmode = values.era_index;\n</list>')
         dh0 <- paste0(dh0,as.character(era_val[iR]),')\n/ selectionrate = always\n/ selectionmode = values.era_index; \n</list>')
       }
     }
@@ -239,11 +238,11 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     nR <- length(att_loc);
     for (iR in 1:nR){
       if (iR==1){
-        dq0 <- paste0('<list att_loc>\n/ items = ("',as.character(att_loc[iR]),'",');
+        dq0 <- paste0('<list att_loc>\n/ items = (',as.integer(att_loc[iR]),',');
       } else if (iR > 1 && iR < nR){
-        dq0 <- paste0(dq0,'"',as.character(att_loc[iR]),'",');
+        dq0 <- paste0(dq0,as.integer(att_loc[iR]),',');
       } else if (iR==nR){
-        dq0 <- paste0(dq0,'"',as.character(att_loc[iR]),'")\n/ selectionrate = always\n/ selectionmode = values.att_index;\n</list>')
+        dq0 <- paste0(dq0,as.integer(att_loc[iR]),')\n/ selectionrate = always\n/ selectionmode = values.att_index;\n</list>')
       }
     }
     write.table(dq0,paste0('att_loc-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
