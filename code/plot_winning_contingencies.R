@@ -7,7 +7,8 @@ source("code/clock2_troll_world.R")
 source("code/scepticc.R")
 library(tidyverse)
 require(utils)
-
+plot = F
+silent = T
 # set up basic contingency
 # niterations = 100 # aiming for 100
 # prepare input df, starting on a coarse grid
@@ -20,24 +21,34 @@ require(utils)
 #                    iteration = 10:niterations)
 
 
- top100 = c(4931, 5608, 5781, 7480, 5340, 2637, 5871, 5094, 6220, 720, 1269, 5903, 4505, 567, 5173, 1135, 1506, 7323, 7347, 
-            283, 1291, 5966, 5655, 1041, 7315, 124, 2534, 4205, 5815, 2619, 430, 7527, 5299, 5438, 1337, 4025, 152, 5213, 6729, 4938, 
-            1250, 4563, 2488, 6644, 5288, 1070, 1803, 136, 155, 5646, 727, 6227, 6108, 1639, 5307, 1764, 7933, 6583, 6578, 6896, 1752, 
-            6176, 5877, 531, 6252, 6342, 4222, 5969, 6623, 7379, 1246, 7432, 5688, 4175, 5413, 1155, 2825, 7564, 6749, 1464, 5436, 294, 
-            4998, 1345, 509, 448, 549, 5643, 6182, 640, 4522, 5293, 7467, 1482, 165, 7590, 2942, 4325, 7751, 163)
+top100 = c(4931, 5608, 754, 5781, 7480, 6508, 5340, 2637, 5871, 8056, 5094, 6220, 720, 1269, 5903, 4505, 567, 5173, 1135, 7174, 1506, 7323, 7347, 283, 1291, 5966, 5655, 1041, 7315, 124, 2534, 4205, 5815, 2619, 430, 7527, 5299, 5438, 1337, 8765, 4025, 152, 6520, 5213, 6729, 4938, 1250, 4563, 2488, 6644, 5288, 1070, 1803, 136, 7530, 155, 5646, 727, 6227, 6108, 1639, 5307, 1764, 7933, 6583, 6578, 8021, 6896, 1752, 6176, 5877, 531, 7595, 6252, 6342, 4222, 5969, 6623, 7379, 1246, 7432, 5688, 4175, 5413, 1155, 2825, 7564, 6749, 1464, 5436, 294, 4998, 1345, 876, 509, 448, 549, 5643, 6182, 640)
 iterations <- top100[1:10]
-# find more good seeds for contingencies
-df <- expand.grid(alpha = c(.1), gamma = c(.3),                 # model params
-                  beta = c(10), # at very high betas, h and u are decorrelated, no need to test
-                  epsilon_u = c(0.3), # 0.0833 is at chance, low correlation -- not worth testing
+# what about subjects' parameters?
+sub_df <- fread("~/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents/skinner/projects_analyses/SCEPTIC/compiled_sceptic_vba_datasets/mmclock_fmri_decay_mfx_sceptic_global_statistics.csv") %>%
+  select(alpha_transformed, gamma_transformed, beta_transformed) %>% rename(alpha = alpha_transformed, gamma = gamma_transformed, beta = beta_transformed)
+ggplot(sub_df, aes(alpha, gamma, size = beta)) + geom_point()
+
+
+df <- expand.grid(epsilon_u = c(0.1, 0.3, 0.9), # 0.0833 is at chance, low correlation -- not worth testing
                   block_length = c(10), # block length > 15 had higher correlations, not worth testing
                   low_avg = c(10),
                   # iteration = c(1:1000),
                   iteration = iterations,
                   #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
-                  seed = 1)
+                  seed = 1:10) %>% merge(sub_df)
+
+# df <- expand.grid(alpha = c(.1), gamma = c(.3),                 # model params
+#                   beta = c(10), # at very high betas, h and u are decorrelated, no need to test
+#                   epsilon_u = c(0.3), # 0.0833 is at chance, low correlation -- not worth testing
+#                   block_length = c(10), # block length > 15 had higher correlations, not worth testing
+#                   low_avg = c(10),
+#                   # iteration = c(1:1000),
+#                   iteration = iterations,
+#                   #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
+#                   seed = 1)
 print(paste0("Evaluating ", nrow(df), " rows"))
 
+d_list <- list()
 for (i in 1:nrow(df)) {
   set.seed(df$iteration[i])
   j = 1
@@ -46,7 +57,7 @@ for (i in 1:nrow(df)) {
   sd_val <- 2 # standard deviation of reward / range of rewards
   centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
   values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
-  width_sd <- 20 # fixed, how wide are the underlying Gaussians
+  width_sd <- 0.349 # fixed, how wide are the underlying Gaussians
   sanity_checks = F # diagnostic plots inside simulation loop
   ntrials = 300
   cat(sprintf("In loop i: %d, j: %d\n", i, j), file = "run_log.txt", append=T)
@@ -78,7 +89,7 @@ for (i in 1:nrow(df)) {
              save.image(file=sprintf("erasure_error_state_%d_%d.RData", i, j))
              return(NULL)
            })
-  if (!is.null(tt)) {message("Generated contingency")} else {message("Trollworld failed")}
+  if (!silent) {if (!is.null(tt)) {message("Generated contingency")} else {message("Trollworld failed")}}
   # plot(tt$spread)
   # new seed for the agent from the expanded set
   sceptic_agent <- scepticc$new(n_basis=12, n_points=200, contingency=tt, seed = df$seed[i])
@@ -92,7 +103,7 @@ for (i in 1:nrow(df)) {
                                  save.image(file=sprintf("error_state_%d_%d.RData", i, j))
                                  return(NULL)
                                })
-  if (!is.null(learning_history)) {message("Ran contingency")} else {message("Scepticc failed")}
+  if (!silent) {if (!is.null(learning_history)) {message("Ran contingency")} else {message("Scepticc failed")}}
   h <- sceptic_agent$get_entropy_history()
   spread <- tt$spread
   d <- cbind(learning_history, h, spread)
@@ -113,18 +124,21 @@ for (i in 1:nrow(df)) {
   # ra <- cor(d$h, d$a, use = "complete.obs", method = "spearman")
   # u_sampled <- sum(d$in_segment)
   # browser()
-  
   v <- tt$get_values_matrix(type = "objective")
   vmax <- apply(v, 1, which.max)
   d$vmax <- vmax/180*pi
   # plot(vmax)
-  setwd("~/code/clock2/simulations/plots")
-  pdf(paste0(df$iteration[i], "_", i, ".pdf"), height = 6, width = 10)
-  print(ggplot(d) + geom_line( aes(x=trial, y=h*3)) + geom_point(aes(x = trial, y = choice, color = outcome)) +
-          scale_color_viridis_b() + geom_segment(aes(x = trial, xend = trial, y = segment_min, yend = segment_max, alpha = u)) + 
-          theme_minimal() + ylab("Location") + geom_text(aes(x = -5, y = 9, label = "Entropy"), angle = 90) +
-          geom_text(aes(trial, vmax, label = "$", size = spread), color = "red", alpha = 0.2) +
-          geom_label(aes(x = 200, y = 11, label = sprintf(paste0("epsilon_u=", sceptic_agent$epsilon_u, ", gamma=", sceptic_agent$gamma,  ", alpha=", sceptic_agent$alpha, ", beta=", sceptic_agent$beta,  ", r=",round(r,2), ", tot. points=", round(sum(d$outcome),0))))))
-  dev.off()
+  if (plot) {
+    setwd("~/code/clock2/simulations/plots")
+    pdf(paste0(df$iteration[i], "_", i, ".pdf"), height = 6, width = 10)
+    print(ggplot(d) + geom_line( aes(x=trial, y=h*3)) + geom_point(aes(x = trial, y = choice, color = outcome)) +
+            scale_color_viridis_b() + geom_segment(aes(x = trial, xend = trial, y = segment_min, yend = segment_max, alpha = u)) + 
+            theme_minimal() + ylab("Location") + geom_text(aes(x = -5, y = 9, label = "Entropy"), angle = 90) +
+            geom_text(aes(trial, vmax, label = "$", size = spread), color = "red", alpha = 0.2) +
+            geom_label(aes(x = 200, y = 11, label = sprintf(paste0("epsilon_u=", sceptic_agent$epsilon_u, ", gamma=", sceptic_agent$gamma,  ", alpha=", sceptic_agent$alpha, ", beta=", sceptic_agent$beta,  ", r=",round(r,2), ", tot. points=", round(sum(d$outcome),0))))))
+    dev.off()
+  }
+  d_list[i] <- d
+  print(i)
   # Sys.sleep(1)
 }

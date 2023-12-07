@@ -12,12 +12,15 @@ sim_dir <- "~/code/clock2/simulations/from_crc"
 out_dir <- "~/code/clock2/simulations"
 setwd(sim_dir)
 
-files <- list.files(pattern = "*narrow*") # this is for all contingencies with 100 seeds
+system(
+  paste0("rsync -azP --include '*file*' --exclude '*'  ayd1@htc.crc.pitt.edu:/ihome/adombrovski/ayd1/code/clock2/simulations/"))
+
+files <- list.files(pattern = "*file*") # this is for all contingencies with 100 seeds
 
 library(furrr)
 future::plan(multisession)
 df <- files %>% future_map_dfr(fread)
-dimensions <- names(df %>% select(-r, -seed))
+dimensions <- names(df %>% select(-r, -seed, -block_length, -low_avg))
 
 # remove NA seeds/r
 df <- df %>% filter(!is.na(seed))
@@ -29,16 +32,21 @@ df <- df %>% filter(!is.na(seed))
 # dev.off()
 
 # low_avg = 10 and timeout = 2 generally work best, stick with these
-sdf <- df %>% summarise(.by = all_of(dimensions), r100 = mean(r)) %>% arrange(alpha, gamma, beta, epsilon_u, block_length, timeout, low_avg, iteration)
-data.table::fwrite(sdf, file = paste0("crc_sim_results_narrow", length(unique(sdf$iteration)), "_iterations.csv"))
+# sdf <- df %>% summarise(.by = all_of(dimensions), r100 = mean(r)) %>% arrange(alpha, gamma, beta, epsilon_u, block_length, timeout, low_avg, iteration)
+sdf <- df %>% summarise(.by = all_of(dimensions), r100 = mean(r), sd100 = sd(r)) %>% arrange(alpha, gamma, beta, epsilon_u, iteration)
+sdf <- df %>% summarise(.by = "iteration", r100 = mean(r), sd100 = sd(r), maxr = max(r), minr = min(r), spanr = maxr-minr)
+top10 <- sdf %>% filter(abs(r100) < .1 & sd100 < .1 & abs(maxr) < 0.2935 & abs(minr) < 0.28) %>% select(iteration) %>% as.array()
+
+
+data.table::fwrite(sdf, file = paste0("crc_sim_results_subjects", length(unique(sdf$iteration)), "_iterations.csv"))
 # best low_avg, iterations
 iterations <- unique(sdf$iteration)
 
-idf <- sdf %>% summarise(.by = c(low_avg, iteration, timeout, epsilon_u), r100 = mean(r100)) %>% filter(epsilon_u == .9) %>% arrange(r100) %>% top_n(-100)
+idf <- sdf %>% summarise(.by = c(low_avg, iteration, epsilon_u), r100 = mean(r100), sd100 = mean(sd100)) %>% filter(epsilon_u == .9) %>% arrange(abs(r100), sd100) %>% top_n(-100)
 top100 <- unique(idf$iteration)
 print(paste(top100, collapse=", "), width = 12) # to paste in plot_winning_contingencies.R
 # just to inspect
-idf %>% select(iteration, r100)
+idf %>% select(iteration, r100, sd100)
 # effect of parameters
 # all
 df %>% summarise(.by = c(gamma, alpha, beta, epsilon_u), r = mean(r)) %>% arrange(r)
@@ -49,10 +57,14 @@ df %>% filter(iteration %in% top100) %>% summarise(.by = c(gamma, alpha, beta, e
 # plot top 100
 # and top 10
 ##############
-plot_df <- sdf %>% filter(iteration %in% top100[1:10])
-ggplot(plot_df, aes(alpha, r100, color = as.factor(gamma))) + geom_point() + facet_grid(beta~epsilon_u)
+plot_df <- df %>% filter()
+ggplot(plot_df, aes(as.factor(iteration), r100, color = gamma, size = beta, alpha = alpha)) + geom_point() + facet_grid(~epsilon_u)
 # find seeds with some high correlations
-sdf %>% filter(iteration %in% top100[1:10] & r100>0.4) %>% select(iteration) %>% unique() %>% nrow()
+sdf %>% filter(iteration %in% top100[1:10] & r100>0.4) %>% select(iteration) %>% unique()
+
+m1 <- aov(r ~ alpha*gamma*beta*epsilon_u * iteration, df)
+library(lsr)
+etaSquared(m1)
 
 ############
 # top 100 stress-tested with 1000 iterations each, 89 completed/11 crashed
