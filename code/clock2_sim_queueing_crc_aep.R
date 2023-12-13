@@ -168,7 +168,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
       
       if (iR==1){
         #df0 <- paste0('<list erasure_locations>\n/ items = (',as.character(temp),',');
-        dq0 <- paste0('<list trial_type>\n/ items = ("',as.character(trial_type[iR]),'",');
+        dq0 <- paste0('<list block_type>\n/ items = ("',as.character(trial_type[iR]),'",');
         dz0 <- paste0('<list drift>\n/ items = (',as.character(drift[iR]),',');
         dh0 <- paste0('<list spread>\n/ items = (',as.character(spread[iR]),',');
       } else if (iR > 1 && iR < nR){
@@ -184,7 +184,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
       }
     }
     #write.table(df0,paste0('era_loc-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
-    write.table(dq0,paste0('trial_type-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+    write.table(dq0,paste0('block_type-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
     write.table(dz0,paste0('drift-vector-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
     write.table(dh0,paste0('spread-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
     options("encoding" = "native.enc") # change encoding back to native
