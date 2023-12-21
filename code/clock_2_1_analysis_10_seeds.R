@@ -53,74 +53,97 @@ design <- rbind(d1,d2,d3,d4,d5,d6,d7,d8,d9,d10)
 epoch_file <- '/Users/andypapale/clock2/Inquisit_design_files/epoch-152.csv'
 e1 <- read_csv(epoch_file)
 e1 <- e1 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
-e1 <- e1 %>% mutate(epoch_bin = rep(1:50, each=6),seed = 152) # just do every 10 trials for now
+e1 <- e1 %>% mutate(epoch_bin = rep(1:60, each=5),seed = 152) # just do every 10 trials for now
 
 epoch_file <- '/Users/andypapale/clock2/Inquisit_design_files/epoch-868.csv'
 e2 <- read_csv(epoch_file)
 e2 <- e2 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
-e2 <- e2 %>% mutate(epoch_bin = rep(1:50, each=6),seed = 868) # just do every 10 trials for now
+e2 <- e2 %>% mutate(epoch_bin = rep(1:60, each=5),seed = 868) # just do every 10 trials for now
 
 epoch_file <- '/Users/andypapale/clock2/Inquisit_design_files/epoch-1464.csv'
 e3 <- read_csv(epoch_file)
 e3 <- e3 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
-e3 <- e3 %>% mutate(epoch_bin = rep(1:50, each=6),seed = 1464) # just do every 10 trials for now
+e3 <- e3 %>% mutate(epoch_bin = rep(1:60, each=5),seed = 1464) # just do every 10 trials for now
 
 epoch_file <- '/Users/andypapale/clock2/Inquisit_design_files/epoch-1752.csv'
 e4 <- read_csv(epoch_file)
 e4 <- e4 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
-e4 <- e4 %>% mutate(epoch_bin = rep(1:50, each=6),seed = 1752) # just do every 10 trials for now
+e4 <- e4 %>% mutate(epoch_bin = rep(1:60, each=5),seed = 1752) # just do every 10 trials for now
 
 epoch_file <- '/Users/andypapale/clock2/Inquisit_design_files/epoch-2534.csv'
 e5 <- read_csv(epoch_file)
 e5 <- e5 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
-e5 <- e5 %>% mutate(epoch_bin = rep(1:50, each=6),seed = 2534) # just do every 10 trials for now
+e5 <- e5 %>% mutate(epoch_bin = rep(1:60, each=5),seed = 2534) # just do every 10 trials for now
 
 epoch_file <- '/Users/andypapale/clock2/Inquisit_design_files/epoch-4938.csv'
 e6 <- read_csv(epoch_file)
 e6 <- e6 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
-e6 <- e6 %>% mutate(epoch_bin = rep(1:50, each=6),seed = 4938) # just do every 10 trials for now
+e6 <- e6 %>% mutate(epoch_bin = rep(1:60, each=5),seed = 4938) # just do every 10 trials for now
 
 epoch_file <- '/Users/andypapale/clock2/Inquisit_design_files/epoch-5094.csv'
 e7 <- read_csv(epoch_file)
 e7 <- e7 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
-e7 <- e7 %>% mutate(epoch_bin = rep(1:50, each=6),seed = 5094) # just do every 10 trials for now
+e7 <- e7 %>% mutate(epoch_bin = rep(1:60, each=5),seed = 5094) # just do every 10 trials for now
 
 epoch_file <- '/Users/andypapale/clock2/Inquisit_design_files/epoch-5173.csv'
 e8 <- read_csv(epoch_file)
 e8 <- e8 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
-e8 <- e8 %>% mutate(epoch_bin = rep(1:50, each=6),seed = 5173) # just do every 10 trials for now
+e8 <- e8 %>% mutate(epoch_bin = rep(1:60, each=5),seed = 5173) # just do every 10 trials for now
 
 epoch_file <- '/Users/andypapale/clock2/Inquisit_design_files/epoch-5815.csv'
 e9 <- read_csv(epoch_file)
 e9 <- e9 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
-e9 <- e9 %>% mutate(epoch_bin = rep(1:50, each=6),seed = 5815) # just do every 10 trials for now
+e9 <- e9 %>% mutate(epoch_bin = rep(1:60, each=5),seed = 5815) # just do every 10 trials for now
 
 epoch_file <- '/Users/andypapale/clock2/Inquisit_design_files/epoch-6520.csv'
 e10 <- read_csv(epoch_file)
 e10 <- e10 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
-e10 <- e10 %>% mutate(epoch_bin = rep(1:50, each=6),seed = 6520) # just do every 10 trials for now
+e10 <- e10 %>% mutate(epoch_bin = rep(1:60, each=5),seed = 6520) # just do every 10 trials for now
 
 epoch <- rbind(e1,e2,e3,e4,e5,e6,e7,e8,e9,e10)
 
 design <- inner_join(design, epoch,by = c('trial','seed'))
 
-df1 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_152_raw_2312081913.csv')
-df2 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_868_raw_2312081908.csv')
-df3 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_868_raw_2312090303.csv')
-df4 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_1464_raw_2312081911.csv')
-df5 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_1752_raw_2312081908.csv')
-df6 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_1752_raw_2312090304.csv')
-df7 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_2534_raw_2312081910.csv')
-df8 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_2534_raw_2312090303.csv')
-df9 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_4938_raw_2312081909.csv')
-df10 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_4938_raw_2312090302.csv')
-df11 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_5094_raw_2312081907.csv')
-df12 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_5173_raw_2312081911.csv')
-df13 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_5173_raw_2312090301.csv')
-df14 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_5815_raw_2312081912.csv')
-df15 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_6520_raw_2312081906.csv')
+df1 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-15/raw/papalea_prosper_clock_2_1_1_seed_152_raw_2312151732.csv')
+df2 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-15/raw/papalea_prosper_clock_2_1_1_seed_868_raw_2312151815.csv')
+df3 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-15/raw/papalea_prosper_clock_2_1_1_seed_1464_raw_2312151733.csv')
+df4 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-15/raw/papalea_prosper_clock_2_1_1_seed_1752_raw_2312151735.csv')
+df5 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-15/raw/papalea_prosper_clock_2_1_1_seed_2534_raw_2312151919.csv')
+df6 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-15/raw/papalea_prosper_clock_2_1_1_seed_2534_raw_2312151920.csv')
+df7 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-15/raw/papalea_prosper_clock_2_1_1_seed_4938_raw_2312151904.csv')
+df8 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-15/raw/papalea_prosper_clock_2_1_1_seed_5094_raw_2312151734.csv')
+df9 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-15/raw/papalea_prosper_clock_2_1_1_seed_6520_raw_2312151734.csv')
+df10 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-15/raw/papalea_prosper_clock_2_1_1_seed_5173_raw_2312151732.csv')
+df11 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-15/raw/papalea_prosper_clock_2_1_1_seed_5815_raw_2312151729.csv')
+#df12 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_5173_raw_2312081911.csv')
+#df13 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_5173_raw_2312090301.csv')
+#df14 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_5815_raw_2312081912.csv')
+#df15 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_12-08/raw/papalea_prosper_clock_2_1_1_seed_6520_raw_2312081906.csv')
 
-df0 <- rbind(df1,df2,df3,df4,df5,df6,df7,df8,df9,df10,df11,df12,df13,df14,df15)
+#df0 <- rbind(df1,df2,df3,df4,df5,df6,df7,df8,df9,df10,df11,df12,df13,df14,df15)
+rm(df0)
+common_cols = intersect(colnames(df1),colnames(df2))
+df0 <- rbind(subset(df1,select = common_cols),subset(df2,select = common_cols))
+common_cols = intersect(colnames(df0),colnames(df3))
+df0 <- rbind(subset(df0,select = common_cols),subset(df3,select = common_cols))
+common_cols = intersect(colnames(df0),colnames(df4))
+df0 <- rbind(subset(df0,select = common_cols),subset(df4,select = common_cols))
+common_cols = intersect(colnames(df0),colnames(df5))
+df0 <- rbind(subset(df0,select = common_cols),subset(df5,select = common_cols))
+common_cols = intersect(colnames(df0),colnames(df6))
+df0 <- rbind(subset(df0,select = common_cols),subset(df6,select = common_cols))
+common_cols = intersect(colnames(df0),colnames(df7))
+df0 <- rbind(subset(df0,select = common_cols),subset(df7,select = common_cols))
+common_cols = intersect(colnames(df0),colnames(df8))
+df0 <- rbind(subset(df0,select = common_cols),subset(df8,select = common_cols))
+common_cols = intersect(colnames(df0),colnames(df9))
+df0 <- rbind(subset(df0,select = common_cols),subset(df9,select = common_cols))
+common_cols = intersect(colnames(df0),colnames(df10))
+df0 <- rbind(subset(df0,select = common_cols),subset(df10,select = common_cols))
+common_cols = intersect(colnames(df0),colnames(df11))
+df0 <- rbind(subset(df0,select = common_cols),subset(df11,select = common_cols))
+
+#df0 <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_5815_testing_raw_1_2023-12-19-18-37-19-595.csv')
 
 df0 <- df0 %>% filter(trialcode == 'feedback')
 df0 <- df0 %>% mutate(u_present = case_when(trial_type == 'erasure' ~ TRUE,
@@ -153,7 +176,7 @@ df0 <- df0 %>% mutate(resp_theta = pos_shifted * pi/180,
          reward_lag = !omission_lag) %>% ungroup()
 df0$pre_clock_freeze = df0$list.preClockFreeze.currentvalue
 
-df0 <- df0 %>% group_by(epoch_bin,seed) %>% mutate(vmax_loc_mean = mean(vmax_location), vmax_mean = mean(vmax)) %>% ungroup()
+df0 <- df0 %>% group_by(epoch_bin,seed) %>% mutate(vmax_loc_mean = mean(vmax_location), vmax_mean = mean(vmax), mean_u_loc = mean(u_location, na.rm=TRUE)) %>% ungroup()
 df0 <- df0 %>% add_count(epoch_bin, epoch,seed) %>% group_by(epoch_bin,seed) %>% mutate(epoch_mode = epoch[n==max(n)][1]) %>% select(-n) %>% ungroup()
 
 df0 <- df0 %>% arrange(subject,block,trial)
@@ -165,10 +188,60 @@ dev.off()
 ggplot(df0, aes(x=trial,y=minuspi_to_pi(resp_theta_c - u_theta_c),color=subject,size=inc_rg)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus u_location')
 ggplot(df0, aes(x=trial,y=minuspi_to_pi(resp_theta_c - att_theta_c),color=subject)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus att_location')
 
-pdf('resp-RTvmax2.pdf',height=12,width=12)
-gg1 <- ggplot(df0, aes(x=pos_shifted,y=inc_rg)) + facet_grid(seed~epoch_bin) + geom_line() + geom_point(aes(color=omission)) + geom_point(aes(x=vmax_loc_mean,y= 150), shape = 2,color='green')
+
+
+# by seed
+pdf('resp-RTvmax_seed1752.pdf',height=12,width=12)
+gg1 <- ggplot(df0 %>% filter(seed==1752), aes(x=pos_shifted,y=inc_rg)) + facet_wrap(~epoch_bin) + geom_line() + geom_point(aes(color=omission)) + geom_point(aes(x=vmax_loc_mean,y= 150), shape = 2,color='green') + geom_point(aes(x=u_location,y=erasure_value),shape=3,color='blue')
 print(gg1)
 dev.off()
+
+pdf('resp-RTvmax_seed5815.pdf',height=12,width=12)
+gg1 <- ggplot(df0 %>% filter(seed==5815), aes(x=pos_shifted,y=inc_rg)) + facet_wrap(~epoch_bin) + geom_line() + geom_point(aes(color=omission)) + geom_point(aes(x=vmax_loc_mean,y= 150), shape = 2,color='green') + geom_point(aes(x=u_location,y=erasure_value),shape=3,color='blue')
+print(gg1)
+dev.off()
+
+pdf('resp-RTvmax_seed152.pdf',height=12,width=12)
+gg1 <- ggplot(df0 %>% filter(seed==152), aes(x=pos_shifted,y=inc_rg)) + facet_wrap(~epoch_bin) + geom_line() + geom_point(aes(color=omission)) + geom_point(aes(x=vmax_loc_mean,y= 150), shape = 2,color='green')  + geom_point(aes(x=u_location,y=erasure_value),shape=3,color='blue')
+print(gg1)
+dev.off()
+
+pdf('resp-RTvmax_seed868.pdf',height=12,width=12)
+gg1 <- ggplot(df0 %>% filter(seed==868), aes(x=pos_shifted,y=inc_rg)) + facet_wrap(~epoch_bin) + geom_line() + geom_point(aes(color=omission)) + geom_point(aes(x=vmax_loc_mean,y= 150), shape = 2,color='green') + geom_point(aes(x=u_location,y=erasure_value),shape=3,color='blue')
+print(gg1)
+dev.off()
+
+pdf('resp-RTvmax_seed5094.pdf',height=12,width=12)
+gg1 <- ggplot(df0 %>% filter(seed==5094), aes(x=pos_shifted,y=inc_rg)) + facet_wrap(~epoch_bin) + geom_line() + geom_point(aes(color=omission)) + geom_point(aes(x=vmax_loc_mean,y= 150), shape = 2,color='green')  + geom_point(aes(x=u_location,y=erasure_value),shape=3,color='blue')
+print(gg1)
+dev.off()
+
+pdf('resp-RTvmax_seed5173.pdf',height=12,width=12)
+gg1 <- ggplot(df0 %>% filter(seed==5173), aes(x=pos_shifted,y=inc_rg)) + facet_wrap(~epoch_bin) + geom_line() + geom_point(aes(color=omission)) + geom_point(aes(x=vmax_loc_mean,y= 150), shape = 2,color='green')  + geom_point(aes(x=u_location,y=erasure_value),shape=3,color='blue')
+print(gg1)
+dev.off()
+
+pdf('resp-RTvmax_seed2534.pdf',height=12,width=12)
+gg1 <- ggplot(df0 %>% filter(seed==2534), aes(x=pos_shifted,y=inc_rg)) + facet_wrap(~epoch_bin) + geom_line() + geom_point(aes(color=omission)) + geom_point(aes(x=vmax_loc_mean,y= 150), shape = 2,color='green')  + geom_point(aes(x=u_location,y=erasure_value),shape=3,color='blue')
+print(gg1)
+dev.off()
+
+pdf('resp-RTvmax_seed1464.pdf',height=12,width=12)
+gg1 <- ggplot(df0 %>% filter(seed==1464), aes(x=pos_shifted,y=inc_rg)) + facet_wrap(~epoch_bin) + geom_line() + geom_point(aes(color=omission)) + geom_point(aes(x=vmax_loc_mean,y= 150), shape = 2,color='green')  + geom_point(aes(x=u_location,y=erasure_value),shape=3,color='blue')
+print(gg1)
+dev.off()
+
+pdf('resp-RTvmax_seed6520.pdf',height=12,width=12)
+gg1 <- ggplot(df0 %>% filter(seed==6520), aes(x=pos_shifted,y=inc_rg)) + facet_wrap(~epoch_bin) + geom_line() + geom_point(aes(color=omission)) + geom_point(aes(x=vmax_loc_mean,y= 150), shape = 2,color='green')  + geom_point(aes(x=u_location,y=erasure_value),shape=3,color='blue')
+print(gg1)
+dev.off()
+
+pdf('resp-RTvmax_seed4938.pdf',height=12,width=12)
+gg1 <- ggplot(df0 %>% filter(seed==4938), aes(x=pos_shifted,y=inc_rg)) + facet_wrap(~epoch_bin) + geom_line() + geom_point(aes(color=omission)) + geom_point(aes(x=vmax_loc_mean,y= 150), shape = 2,color='green')  + geom_point(aes(x=u_location,y=erasure_value),shape=3,color='blue')
+print(gg1)
+dev.off()
+
+
 
 ggplot(df0, aes(trial, vmax_theta_c, color = vmax)) + geom_line() + scale_color_viridis_c()
 ggplot(design, aes(trial, vmax)) + geom_line() + scale_color_viridis_c()
@@ -178,15 +251,16 @@ ggplot(df0,aes(x=trial,y=minuspi_to_pi(resp_theta_c - u_theta_c))) + geom_point(
 m1 <- lmerTest::lmer(pos_shifted ~ scale(vmax_location)*scale(vmax) + scale(resp_theta_c_lag)*outcome_lag + (1|subject), df0)
 summary(m1)
 
+
 df <- df0
 mlist <- list()
 for (i in 1:1000) {
   df$u_location[!df$u_present] <- runif(length(df$u_location[!df$u_present]), 0, 360)
   df$att_location[!df$att_present] <- runif(length(df$att_location[!df$att_present]), 0, 360)
-  mi <- lmerTest::lmer(pos_shifted ~ scale(vmax_location)*scale(vmax)*seed + 
-                         scale(u_location)*u_present*seed + 
-                         scale(att_location)*att_present*seed +
-                         resp_theta_c_lag*outcome_lag*seed +
+  mi <- lmerTest::lmer(pos_shifted ~ scale(vmax_location)*scale(vmax) + 
+                         scale(u_location)*u_present + 
+                         scale(att_location)*att_present +
+                         resp_theta_c_lag*outcome_lag +
                          (1|subject), 
                        df)
   mdf <- broom.mixed::tidy(mi)
@@ -197,3 +271,4 @@ for (i in 1:1000) {
 ddf <- rbindlist(mlist)
 str(ddf)
 mean_ddf <- ddf %>% filter(effect == "fixed") %>% select(-i, -effect, -group) %>% group_by(term) %>% summarise_all(mean)
+
