@@ -33,7 +33,7 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
                           epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
                           block_length = c(10), # block length > 15 had higher correlations, not worth testing
                           low_avg = c(10),
-                          iteration = c(5815),
+                          iteration = c(6520),
                           #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
                           seed = 1)
 } else {
@@ -72,47 +72,55 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
   bump_value <- mean_val * bump_prominence
   bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
   setwd(base_dir)
-  tt <- iterate_sim(rob_grid, bump_prominence, ncenters, centers, values, width_sd, i, j)
+  dum_run <- iterate_sim(rob_grid, bump_prominence, ncenters, centers, values, width_sd, i, j)
+  rm(dum_run)
   tt <- iterate_sim(rob_grid, bump_prominence, ncenters, centers, values, width_sd, i, j)
   cc <- round(tt$get_values_matrix(type = 'objective'),0) 
   inq_tri <- data.frame(cc)
   inq_tri <- inq_tri %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = readr::parse_number(RT))
   inq_tri <- inq_tri %>% arrange(trial,RT)
   write.csv(inq_tri,paste0('Design-Matrix-with-Erasures-',as.character(rob_grid$iteration),'.csv'))
+  values1 <- data.frame(t(cc))
+  values1 <- values1 %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial") %>%
+    mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
+                                                                             vmax_location = timepoint[which.max(value)])
+  plot(values1$vmax_location)
   
-  # set.seed(rob_grid$iteration[i])
-  # ncenters <- 9 # how many gaussians there are
-  # mean_val <- 10 # mean reward rate
-  # sd_val <- 2 # standard deviation of reward / range of rewards
-  # centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
-  # values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
-  # width_sd <- 0.349 # fixed, how wide are the underlying Gaussians
-  # sanity_checks = T # diagnostic plots inside simulation loop
-  # ntrials = 300
-  # i = 1
-  # j = 1
-  # cat(sprintf("In loop i: %d, j: %d\n", i, j), file = "run_log.txt", append=T)
-  # # set up contingency
-  # bump_prominence <- 10
-  # bump_value <- mean_val * bump_prominence
-  # bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
-  # setwd(base_dir)
-  # contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians")
-  # qq <- troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=1)
-  # qq$apply_flex(high_avg = 1, high_spread = 0, low_avg = rob_grid$low_avg[i], spread_max = 100, jump_high = T)
-  # contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians")
-  # qq <- troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=1)
-  # qq$apply_flex(high_avg = 1, high_spread = 0, low_avg = rob_grid$low_avg[i], spread_max = 100, jump_high = T)
-  # values <- data.frame(round(t(qq$get_values_matrix())),0)
-  # #values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial")
-  # values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial") %>%
-  #   mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
-  #                                                                            vmax_location = timepoint[which.max(value)])
-  # plot(values$vmax_location)
-  # 
-  # inq_tri <- round(qq$get_values_matrix(),0) # original value matrix
-  aa <- round(tt$get_values_matrix(type = 'flex',quiet = F),0) 
+  set.seed(rob_grid$iteration[i])
+  ncenters <- 9 # how many gaussians there are
+  mean_val <- 10 # mean reward rate
+  sd_val <- 2 # standard deviation of reward / range of rewards
+  centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
+  values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
+  width_sd <- 0.349 # fixed, how wide are the underlying Gaussians
+  sanity_checks = F # diagnostic plots inside simulation loop
+  ntrials = 300
+  i = 1
+  j = 1
+  cat(sprintf("In loop i: %d, j: %d\n", i, j), file = "run_log.txt", append=T)
+  # set up contingency
+  bump_prominence <- 10
+  bump_value <- mean_val * bump_prominence
+  bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
+  setwd(base_dir)
+  dum_run <- iterate_sim(rob_grid, bump_prominence, ncenters, centers, values, width_sd, i, j)
+  rm(dum_run)
+  contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians")
+  qq <- troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=1)
+  qq$apply_flex(high_avg = 1, high_spread = 0, low_avg = rob_grid$low_avg[i], spread_max = 100, jump_high = T)
+  values2 <- data.frame(round(t(qq$get_values_matrix())),0)
+  #values <- values %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial")
+  values2 <- values2 %>% mutate(timepoint = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "trial") %>%
+    mutate(trial = extract_numeric(trial)) %>% group_by(trial) %>% summarise(vmax = max(value),
+                                                                             vmax_location = timepoint[which.max(value)])
+  plot(values2$vmax_location)
+  aa <- round(qq$get_values_matrix(type = 'objective',quiet = F),0) 
   
+  # for (r in 1:nrow(aa)) {
+  #   plot(aa[r,])
+  #   print(r)
+  #   Sys.sleep(.2)
+  # }
   
   if (generate_inquisit_lists){
     
@@ -130,20 +138,20 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     df0 <- NULL;
     dq0 <- NULL;
     dz0 <- NULL;
-    nR <- nrow(inq_tri);
+    nR <- nrow(aa);
     for (iR in 1:nR){
       if (iR==1){
-        df0 <- paste0('<list values>\n/ items = (',as.character(inq_tri$value[iR]),',');
-        dq0 <- paste0('<list RT>\n/ items = (',as.character(inq_tri$RT[iR]),',');
-        dz0 <- paste0('<list trial>\n/ items = (',as.character(inq_tri$trial[iR]),',');
+        df0 <- paste0('<list values>\n/ items = (',as.character(aa$value[iR]),',');
+        dq0 <- paste0('<list RT>\n/ items = (',as.character(aa$RT[iR]),',');
+        dz0 <- paste0('<list trial>\n/ items = (',as.character(aa$trial[iR]),',');
       } else if (iR > 1 && iR < nR){
-        df0 <- paste0(df0,as.character(inq_tri$value[iR]),',');
-        dq0 <- paste0(dq0,as.character(inq_tri$RT[iR]),',');
-        dz0 <- paste0(dz0,as.character(inq_tri$trial[iR]),',');
+        df0 <- paste0(df0,as.character(aa$value[iR]),',');
+        dq0 <- paste0(dq0,as.character(aa$RT[iR]),',');
+        dz0 <- paste0(dz0,as.character(aa$trial[iR]),',');
       } else if (iR==nR){
-        df0 <- paste0(df0,as.character(inq_tri$value[iR]),')\n/ selectionrate = always\n/ selectionmode = values.master_idx;\n</list>')
-        dq0 <- paste0(dq0,as.character(inq_tri$RT[iR]),')\n/ selectionrate = always\n/ selectionmode = values.master_idx;\n</list>')
-        dz0 <- paste0(dz0,as.character(inq_tri$trial[iR]),')\n/ selectionrate = always\n/ selectionmode = values.master_idx;\n</list>')
+        df0 <- paste0(df0,as.character(aa$value[iR]),')\n/ selectionrate = always\n/ selectionmode = values.master_idx;\n</list>')
+        dq0 <- paste0(dq0,as.character(aa$RT[iR]),')\n/ selectionrate = always\n/ selectionmode = values.master_idx;\n</list>')
+        dz0 <- paste0(dz0,as.character(aa$trial[iR]),')\n/ selectionrate = always\n/ selectionmode = values.master_idx;\n</list>')
       }
       if ((iR %% 1000)==0){
         print(iR/nR);
@@ -220,12 +228,8 @@ if (sum(stringr::str_detect(Sys.info(), "andypapale"))>1)  {
     era_val = NULL
     era_loc1 = NULL
     att_loc = NULL
-    era_loc_last = 0
-    att_loc_last = 0
     iC = 1;
     iD = 1;
-    iT0 = NULL
-    last_block <- 'dummy';
     for (iT in 1:300){
       if (tt$erasure_segments$trial_type[iT]=='erasure' && tt$erasure_segments$clicks_remain[iT]==2){
         era_val[iC] <- cc[iT,era_loc[iT]];
