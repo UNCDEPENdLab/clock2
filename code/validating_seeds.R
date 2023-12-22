@@ -3,7 +3,7 @@ rob_grid <- expand.grid(alpha = c(0.2), gamma = c(0.1),                 # model 
                         epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
                         block_length = c(10), # block length > 15 had higher correlations, not worth testing
                         low_avg = c(10),
-                        iteration = c(6520),
+                        iteration = c(868),
                         #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
                         seed = 1)
 
@@ -76,9 +76,14 @@ dd <- round(qq$get_values_matrix(type = 'objective', quiet = F),0)
 #   print(r)
 #   Sys.sleep(.2)
 # }
-
-
-df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_6520_testing_raw_1_2023-12-22-18-49-18-373.csv')
+df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_868_testing_raw_1_2023-12-22-20-58-38-919.csv')
+#df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_1464_testing_raw_1_2023-12-22-20-46-44-340.csv')
+#df<- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_1752_testing_raw_1_2023-12-22-20-26-53-565.csv')
+#df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_2534_testing_raw_1_2023-12-22-20-07-56-051.csv')
+#df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_4938_testing_raw_1_2023-12-22-19-48-02-863.csv')
+#df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_5094_testing_raw_1_2023-12-22-19-36-38-316.csv')
+#df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_5173_testing_raw_1_2023-12-22-19-20-17-939.csv')
+#df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_6520_testing_raw_1_2023-12-22-18-49-18-373.csv')
 #df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_5815_testing_raw_1_2023-12-21-22-36-42-177.csv')
 df0 <- df %>% filter(trialcode=="getValueVector")
 df0$trial <- df0$trial...18 # can make this step not necessary in final program
@@ -93,17 +98,25 @@ setwd(paste0('/Users/andypapale/Desktop/seed-',as.character(rob_grid$iteration),
 
 columns = c('e_pos','e_val');
 
+val_cat <- NULL;
+oval_cat <- NULL;
+loc_cat <- NULL;
 for (iT in 1:300){
   e_val <- d9_w_era %>% filter(trial==iT);
   e_val <- e_val$value[round(e_val$RT)==round(era_loc[iT])];
   df_era <- data.frame(e_pos = era_loc[iT],e_val = e_val)
   inq_e_val = df0 %>% filter(trial==iT); 
+  oeval <- d9 %>% filter(trial==iT);
+  oeval <- oeval$value[round(oeval$RT)==round(era_loc[iT])];
   df_era <- data.frame(matrix(nrow = 0, ncol = length(columns)))
   colnames(df_era) = columns
   if (gg$erasure_segments$trial_type[iT]=='erasure'){
     era_loc2 <- inq_e_val$erasure_RT[1];
     e_val_inq <- inq_e_val$erasure_value[1];
     df_era <- data.frame(e_pos = era_loc[iT],e_val = e_val)
+    val_cat <- rbind(val_cat,df_era$e_val)
+    oval_cat <- rbind(oval_cat, oeval)
+    loc_cat <- rbind(loc_cat,era_loc[iT])
   } else if (gg$erasure_segments$trial_type[iT]=='attention'){
     era_loc2 <- inq_e_val$stim_center_deg[1];
     e_val_inq <- NULL;
@@ -132,3 +145,8 @@ for (iT in 1:300){
   print(gg1); 
   dev.off()
 }
+
+setwd('~/clock2/Inquisit_design_files/')
+write.table(val_cat,paste0('erasure-values-',as.character(rob_grid$iteration),'.csv'))
+write.table(loc_cat,paste0('erasure-locations-',as.character(rob_grid$iteration),'.csv'))
+write.table(oval_cat,paste0('original-values-',as.character(rob_grid$iteration),'.csv'))
