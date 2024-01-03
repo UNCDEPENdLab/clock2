@@ -1,5 +1,5 @@
 if (!exists("rcpp_cache_dir")) rcpp_cache_dir <- "~/Rcpp_cache"
-if (!exists("rcpp_source_dir")) rcpp_source_dir <- "~/Data_Analysis/clock2/code/cpp"
+if (!exists("rcpp_source_dir")) rcpp_source_dir <- "~/clock2/code/cpp"
 
 troll_world <- R6::R6Class(
   "troll_world",
