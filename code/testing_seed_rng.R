@@ -5,7 +5,7 @@
 
 
 
-
+base_dir <- "~/clock2/code/"
 rob_grid <- expand.grid(alpha = c(0.2), gamma = c(0.1),                 # model params
                         beta = c(1), # at very high betas, h and u are decorrelated, no need to test
                         epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
@@ -14,6 +14,10 @@ rob_grid <- expand.grid(alpha = c(0.2), gamma = c(0.1),                 # model 
                         iteration = c(152),
                         #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
                         seed = 1)
+setwd(base_dir)
+source("von_mises_basis.R")
+source("clock2_troll_world.R")
+source("scepticc.R")
 set.seed(rob_grid$iteration)
 ncenters <- 9 # how many gaussians there are
 mean_val <- 10 # mean reward rate
@@ -21,7 +25,6 @@ sd_val <- 2 # standard deviation of reward / range of rewards
 centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
 values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
 width_sd <- 0.349 # fixed, how wide are the underlying Gaussians
-sanity_checks = F # diagnostic plots inside simulation loop
 ntrials = 300
 bump_prominence <- 10
 bump_value <- mean_val * bump_prominence
@@ -41,5 +44,5 @@ cc <- round(tt$get_values_matrix(type = 'objective', quiet = F),0)
 for (r in 1:nrow(cc)) {
    plot(cc[r,])
    print(r)
-   Sys.sleep(.2)
+   Sys.sleep(1)
 }

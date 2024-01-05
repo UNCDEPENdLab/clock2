@@ -1,5 +1,5 @@
 library(tidyverse)
-
+library(BAMBI)
 
 loc_1 <- read.csv('/Users/andypapale/clock2/Inquisit_design_files/erasure-locations-152.csv',header=FALSE) %>% mutate(seed=152,type = 'location')
 loc_2 <- read.csv('/Users/andypapale/clock2/Inquisit_design_files/erasure-locations-868.csv',header=FALSE) %>% mutate(seed=868,type = 'location')
@@ -145,3 +145,98 @@ ggplot(values, aes(x=erasure_minus_original)) + geom_histogram(bins=50) + facet_
 
 
 
+
+erasure_RT_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-locations-152.csv'
+e1 <- read.csv(erasure_RT_file)
+e1 <- e1 %>% rename(era_loc = colnames(e1)[1]) %>% mutate(seed=152)
+
+erasure_RT_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-locations-868.csv'
+e2 <- read.csv(erasure_RT_file)
+e2 <- e2 %>% rename(era_loc = colnames(e2)[1]) %>% mutate(seed=868)
+
+erasure_RT_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-locations-1464.csv'
+e3 <- read.csv(erasure_RT_file)
+e3 <- e3 %>% rename(era_loc = colnames(e3)[1]) %>% mutate(seed=1464)
+
+erasure_RT_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-locations-1752.csv'
+e4 <- read.csv(erasure_RT_file)
+e4 <- e4 %>% rename(era_loc = colnames(e4)[1]) %>% mutate(seed=1752)
+
+erasure_RT_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-locations-2534.csv'
+e5 <- read.csv(erasure_RT_file)
+e5 <- e5 %>% rename(era_loc = colnames(e5)[1]) %>% mutate(seed=2534)
+
+erasure_RT_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-locations-4938.csv'
+e6 <- read.csv(erasure_RT_file)
+e6 <- e6 %>% rename(era_loc = colnames(e6)[1]) %>% mutate(seed=4938)
+
+erasure_RT_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-locations-5094.csv'
+e7 <- read.csv(erasure_RT_file)
+e7 <- e7 %>% rename(era_loc = colnames(e7)[1]) %>% mutate(seed=5094)
+
+erasure_RT_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-locations-5173.csv'
+e8 <- read.csv(erasure_RT_file)
+e8 <- e8 %>% rename(era_loc = colnames(e8)[1]) %>% mutate(seed=5173)
+
+erasure_RT_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-locations-5815.csv'
+e9 <- read.csv(erasure_RT_file)
+e9 <- e9 %>% rename(era_loc = colnames(e9)[1]) %>% mutate(seed=5815)
+
+erasure_RT_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-locations-6520.csv'
+e10 <- read.csv(erasure_RT_file)
+e10 <- e10 %>% rename(era_loc = colnames(e10)[1]) %>% mutate(seed=6520)
+
+era_loc <- rbind(e1,e2,e3,e4,e5,e6,e7,e8,e9,e10)
+
+erasure_trial_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-trial-152.csv'
+e1 <- read.csv(erasure_trial_file)
+e1 <- e1 %>% rename(era_trial = colnames(e1)[1]) 
+
+erasure_trial_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-trial-868.csv'
+e2 <- read.csv(erasure_trial_file)
+e2 <- e2 %>% rename(era_trial = colnames(e2)[1]) 
+
+erasure_trial_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-trial-1464.csv'
+e3 <- read.csv(erasure_trial_file)
+e3 <- e3 %>% rename(era_trial = colnames(e3)[1]) 
+
+erasure_trial_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-trial-1752.csv'
+e4 <- read.csv(erasure_trial_file)
+e4 <- e4 %>% rename(era_trial = colnames(e4)[1]) 
+
+erasure_trial_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-trial-2534.csv'
+e5 <- read.csv(erasure_trial_file)
+e5 <- e5 %>% rename(era_trial = colnames(e5)[1]) 
+
+erasure_trial_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-trial-4938.csv'
+e6 <- read.csv(erasure_trial_file)
+e6 <- e6 %>% rename(era_trial = colnames(e6)[1]) 
+
+erasure_trial_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-trial-5094.csv'
+e7 <- read.csv(erasure_trial_file)
+e7 <- e7 %>% rename(era_trial = colnames(e7)[1]) 
+
+erasure_trial_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-trial-5173.csv'
+e8 <- read.csv(erasure_trial_file)
+e8 <- e8 %>% rename(era_trial = colnames(e8)[1]) 
+
+erasure_trial_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-trial-5815.csv'
+e9 <- read.csv(erasure_trial_file)
+e9 <- e9 %>% rename(era_trial = colnames(e9)[1]) 
+
+erasure_trial_file <- '/Users/andypapale/clock2/Inquisit_design_files/erasure-trial-6520.csv'
+e10 <- read.csv(erasure_trial_file)
+e10 <- e10 %>% rename(era_trial = colnames(e10)[1]) 
+
+era_trial <- rbind(e1,e2,e3,e4,e5,e6,e7,e8,e9,e10)
+
+era <- cbind(era_trial,era_loc)
+era <- era %>% rename(trial = era_trial)
+
+design1 <- inner_join(design,era,by=c('seed','trial'))
+
+design1 <- design1 %>% mutate(erasure_RT_minus_vmax_RT = zero_to_2pi(era_loc - vmax_location)*180/pi)
+ggplot(design1, aes(x=erasure_RT_minus_vmax_RT)) + geom_histogram(bins=20) + facet_wrap(~seed)
+
+sum <- design1 %>% group_by(seed) %>% summarize(eRTp15vmaxRT = sum(erasure_RT_minus_vmax_RT <= 15, na.rm=TRUE), eRTm15vmaxRT = sum(erasure_RT_minus_vmax_RT >=345, na.rm=TRUE)) %>% ungroup()
+sum <- sum %>% mutate(eRTpm15vmaxRT = eRTp15vmaxRT + eRTm15vmaxRT) %>% select(seed,eRTpm15vmaxRT)
