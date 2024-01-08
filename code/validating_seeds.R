@@ -1,4 +1,4 @@
-rob_grid <- expand.grid(alpha = c(0.2), gamma = c(0.1),                 # model params
+df <- data.frame(alpha = c(0.2), gamma = c(0.1),                 # model params
                         beta = c(1), # at very high betas, h and u are decorrelated, no need to test
                         epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
                         block_length = c(10), # block length > 15 had higher correlations, not worth testing
@@ -11,7 +11,7 @@ source('~/clock2/code/clock2_sim_crc_aep.R')
 setwd(output_dir)
 i = 1
 j = 1
-set.seed(rob_grid$iteration[i])
+set.seed(df$iteration[i])
 ncenters <- 9 # how many gaussians there are
 mean_val <- 10 # mean reward rate
 sd_val <- 2 # standard deviation of reward / range of rewards
@@ -24,28 +24,15 @@ bump_prominence <- 10
 bump_value <- mean_val * bump_prominence
 bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
 setwd(base_dir)
-tt <- iterate_sim(rob_grid, bump_prominence, ncenters, centers, values, width_sd, i, j)
-cc <- round(tt$get_values_matrix(type = 'objective', quiet = F),0)
- for (r in 1:nrow(cc)) {
-    plot(cc[r,])
-    print(r)
-    Sys.sleep(.2)
- }
-gg <- iterate_sim(rob_grid, bump_prominence, ncenters, centers, values, width_sd, i, j)
+gg <- iterate_sim(df, bump_prominence, ncenters, centers, values, width_sd, i, j)
 cc <- round(gg$get_values_matrix(type = 'objective', quiet = F),0)
-# for (r in 1:nrow(cc)) {
-#    plot(cc[r,])
-#    print(r)
-#    Sys.sleep(.2)
-# }
-
 inq_tri <- data.frame(cc)
 inq_tri <- inq_tri %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = readr::parse_number(RT))
 inq_tri <- inq_tri %>% arrange(trial,RT)
 setwd('/Users/andypapale/clock2/Inquisit_design_files/')
-write.csv(inq_tri,paste0('Design-Matrix-with-Erasures-',as.character(rob_grid$iteration),'.csv'))
+write.csv(inq_tri,paste0('Design-Matrix-with-Erasures-',as.character(df$iteration),'.csv'))
 
-set.seed(rob_grid$iteration[i])
+set.seed(df$iteration[i])
 ncenters <- 9 # how many gaussians there are
 mean_val <- 10 # mean reward rate
 sd_val <- 2 # standard deviation of reward / range of rewards
@@ -62,11 +49,11 @@ bump_prominence <- 10
 bump_value <- mean_val * bump_prominence
 bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
 setwd(base_dir)
-dd <- iterate_sim(rob_grid, bump_prominence, ncenters, centers, values, width_sd, i, j)
+dd <- iterate_sim(df, bump_prominence, ncenters, centers, values, width_sd, i, j)
 rm(dd)
 contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians")
 qq <- troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=1)
-qq$apply_flex(high_avg = 1, high_spread = 0, low_avg = rob_grid$low_avg[i], spread_max = 100, jump_high = T)
+qq$apply_flex(high_avg = 1, high_spread = 0, low_avg = df$low_avg[i], spread_max = 100, jump_high = T)
 dd <- round(qq$get_values_matrix(type = 'objective', quiet = F),0)
 
 # for (r in 1:nrow(dd)) {
@@ -98,8 +85,9 @@ for (iT in 1:300){
   }
 }
 setwd('/Users/andypapale/Desktop/2023-12-22-Testing/data')
+df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-08-00-14-02-756.csv');
 #df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-04-17-23-27-494.csv')
-df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_2534_testing_raw_1_2024-01-04-17-32-42-019.csv')
+#df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_2534_testing_raw_1_2024-01-04-17-32-42-019.csv')
 #df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-02-23-57-16-667.csv')
 #df <- read_csv('clock_2_1_1_seed_868_testing_raw_1_2023-12-22-20-58-38-919.csv')
 #df <- read_csv('clock_2_1_1_seed_1464_testing_raw_1_2023-12-22-20-46-44-340.csv')
@@ -111,16 +99,16 @@ df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_
 #df <- read_csv('clock_2_1_1_seed_5815_testing_raw_1_2023-12-22-15-44-04-427.csv')
 #df <- read_csv('clock_2_1_1_seed_6520_testing_raw_1_2023-12-22-18-49-18-373.csv')
 
-df0 <- df %>% filter(trialcode=="getValueVector")
+df0 <- df_inq %>% filter(trialcode=="getValueVector")
 df0$trial <- df0$trial...18 # can make this step not necessary in final program
-d9 <- read_csv(paste0('/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-',as.character(rob_grid$iteration),'.csv'))
+d9 <- read_csv(paste0('/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-',as.character(df$iteration),'.csv'))
 
-d9_w_era <- read_csv(paste0('/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-with-Erasures-',as.character(rob_grid$iteration),'.csv'))
+d9_w_era <- read_csv(paste0('/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-with-Erasures-',as.character(df$iteration),'.csv'))
 
-if (!file.exists(paste0('/Users/andypapale/Desktop/seed-',as.character(rob_grid$iteration),'-validation'))){
-  dir.create(paste0('/Users/andypapale/Desktop/seed-',as.character(rob_grid$iteration),'-validation'))
+if (!file.exists(paste0('/Users/andypapale/Desktop/seed-',as.character(df$iteration),'-validation'))){
+  dir.create(paste0('/Users/andypapale/Desktop/seed-',as.character(df$iteration),'-validation'))
 }
-setwd(paste0('/Users/andypapale/Desktop/seed-',as.character(rob_grid$iteration),'-validation'))
+setwd(paste0('/Users/andypapale/Desktop/seed-',as.character(df$iteration),'-validation'))
 
 columns = c('e_pos','e_val');
 
@@ -152,7 +140,7 @@ for (iT in 1:300){
     era_loc2 <- NULL;
     e_val_inq <- NULL;
   }
-  pdf(paste0('seed-',as.character(rob_grid$iteration),'-trial-',iT,'.pdf'),height=12,width=12);
+  pdf(paste0('seed-',as.character(df$iteration),'-trial-',iT,'.pdf'),height=12,width=12);
   if (nrow(df_era)==1){
     gg1 <- ggplot(d9 %>% filter(trial==iT), aes(x=RT,y=value), color='black') +
      geom_line() + geom_point(size=5,color='black') +
@@ -175,7 +163,7 @@ for (iT in 1:300){
 }
 
 setwd('~/clock2/Inquisit_design_files/')
-write.table(val_cat,paste0('erasure-values-',as.character(rob_grid$iteration),'.csv'),row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(loc_cat,paste0('erasure-locations-',as.character(rob_grid$iteration),'.csv'),row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(oval_cat,paste0('original-values-',as.character(rob_grid$iteration),'.csv'),row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(e_trial,paste0('erasure-trial-',as.character(rob_grid$iteration),'.csv'),row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(val_cat,paste0('erasure-values-',as.character(df$iteration),'.csv'),row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(loc_cat,paste0('erasure-locations-',as.character(df$iteration),'.csv'),row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(oval_cat,paste0('original-values-',as.character(df$iteration),'.csv'),row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(e_trial,paste0('erasure-trial-',as.character(df$iteration),'.csv'),row.names = FALSE, col.names = FALSE, quote = FALSE)

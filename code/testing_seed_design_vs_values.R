@@ -7,7 +7,7 @@ df <- data.frame(alpha = c(0.2), gamma = c(0.1),                 # model params
                         epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
                         block_length = c(10), # block length > 15 had higher correlations, not worth testing
                         low_avg = c(10),
-                        iteration = c(5173),
+                        iteration = c(152),
                         #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
                         seed = 1)
 
@@ -147,9 +147,9 @@ if (generate_inquisit_lists){
   aa <- data.frame(aa)
   aa <- aa %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = extract_numeric(RT))
   aa <- aa %>% arrange(trial,RT)
-  write.csv(aa,paste0('Design-Matrix-',as.character(rob_grid$iteration),'.csv'))
+  write.csv(aa,paste0('Design-Matrix-',as.character(df$iteration),'.csv'))
   epoch <- data.frame(tt$epoch)
-  write.csv(epoch,paste0('epoch-',as.character(rob_grid$iteration),'.csv'))
+  write.csv(epoch,paste0('epoch-',as.character(df$iteration),'.csv'))
   
   #generate value, RT and trial lists as 1 x (nT x nRT) inquisit lists
   options("encoding" = "UTF-8") # encode in UTF-8 as suggested here https://forums.millisecond.com/Topic15777.aspx#15778
@@ -175,9 +175,9 @@ if (generate_inquisit_lists){
       print(iR/nR);
     }
   }
-  write.table(df0,paste0('values-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
-  write.table(dq0,paste0('RTs-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
-  write.table(dz0,paste0('trials-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+  write.table(df0,paste0('values-',as.character(df$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+  write.table(dq0,paste0('RTs-',as.character(df$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+  write.table(dz0,paste0('trials-',as.character(df$iteration),'.txt'),row.names=F,col.names=F,quote=F)
   options("encoding" = "native.enc") # change encoding back to native
   
   trial_type <- tt$erasure_segments$trial_type
@@ -214,10 +214,10 @@ if (generate_inquisit_lists){
       dh0 <- paste0(dh0,as.character(spread[iR]),')\n/ selectionrate = always\n/ selectionmode = values.trial; \n</list>')
     }
   }
-  #write.table(df0,paste0('era_loc-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
-  write.table(dq0,paste0('block_type-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
-  write.table(dz0,paste0('drift-vector-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
-  write.table(dh0,paste0('spread-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+  #write.table(df0,paste0('era_loc-',as.character(df$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+  write.table(dq0,paste0('block_type-',as.character(df$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+  write.table(dz0,paste0('drift-vector-',as.character(df$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+  write.table(dh0,paste0('spread-',as.character(df$iteration),'.txt'),row.names=F,col.names=F,quote=F)
   options("encoding" = "native.enc") # change encoding back to native
   
   era_val = NULL
@@ -253,8 +253,8 @@ if (generate_inquisit_lists){
       dh0 <- paste0(dh0,as.character(era_val[iR]),')\n/ selectionrate = always\n/ selectionmode = values.era_index; \n</list>')
     }
   }
-  write.table(dq0,paste0('era_loc-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
-  write.table(dh0,paste0('era_val-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+  write.table(dq0,paste0('era_loc-',as.character(df$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+  write.table(dh0,paste0('era_val-',as.character(df$iteration),'.txt'),row.names=F,col.names=F,quote=F)
   options("encoding" = "native.enc") # change encoding back to native
   
   options("encoding" = "UTF-8")
@@ -269,7 +269,7 @@ if (generate_inquisit_lists){
       dq0 <- paste0(dq0,as.integer(att_loc[iR]),')\n/ selectionrate = always\n/ selectionmode = values.att_index;\n</list>')
     }
   }
-  write.table(dq0,paste0('att_loc-',as.character(rob_grid$iteration),'.txt'),row.names=F,col.names=F,quote=F)
+  write.table(dq0,paste0('att_loc-',as.character(df$iteration),'.txt'),row.names=F,col.names=F,quote=F)
   options("encoding" = "native.enc") # change encoding back to native
   
   
