@@ -8,6 +8,7 @@ library(tidyverse)
 library(data.table)
 library(lme4)
 library(BAMBI)
+library(pracma)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-152.csv'
 d1 <- read_csv(design_file)
 d1 <- d1 %>% group_by(trial) %>% summarise(vmax = max(value),
@@ -52,7 +53,7 @@ design <- rbind(d1,d2,d3,d4,d5,d6,d7,d8,d9,d10)
 
 epoch_file <- '/Users/andypapale/clock2/Inquisit_design_files/epoch-152.csv'
 e1 <- read_csv(epoch_file)
-e1 <- e1 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = qq.epoch)
+e1 <- e1 %>% as_tibble() %>% select(-`...1`) %>% mutate(trial = row_number()) %>% rename(epoch = tt.epoch)
 e1 <- e1 %>% mutate(epoch_bin = rep(1:60, each=5),seed = 152) # just do every 10 trials for now
 
 epoch_file <- '/Users/andypapale/clock2/Inquisit_design_files/epoch-868.csv'
@@ -154,7 +155,7 @@ df0 <- df0 %>% mutate(u_present = case_when(trial_type == 'erasure' ~ TRUE,
                       att_location = case_when(trial_type == 'attention' ~ stim_center_deg)
 )
 
-df0$trial <- df0$trial...18 # can make this step not necessary in final program
+#df0$trial <- df0$trial...18 # can make this step not necessary in final program
 
 df0 <- inner_join(df0,design,by=c('trial','seed'))
 

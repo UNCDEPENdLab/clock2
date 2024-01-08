@@ -85,7 +85,7 @@ for (iT in 1:300){
   }
 }
 setwd('/Users/andypapale/Desktop/2023-12-22-Testing/data')
-df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-08-00-14-02-756.csv');
+df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-08-18-34-01-988.csv');
 #df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-04-17-23-27-494.csv')
 #df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_2534_testing_raw_1_2024-01-04-17-32-42-019.csv')
 #df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-02-23-57-16-667.csv')
@@ -100,7 +100,7 @@ df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/cloc
 #df <- read_csv('clock_2_1_1_seed_6520_testing_raw_1_2023-12-22-18-49-18-373.csv')
 
 df0 <- df_inq %>% filter(trialcode=="getValueVector")
-df0$trial <- df0$trial...18 # can make this step not necessary in final program
+#df0$trial <- df0$trial...18 # can make this step not necessary in final program
 d9 <- read_csv(paste0('/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-',as.character(df$iteration),'.csv'))
 
 d9_w_era <- read_csv(paste0('/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-with-Erasures-',as.character(df$iteration),'.csv'))

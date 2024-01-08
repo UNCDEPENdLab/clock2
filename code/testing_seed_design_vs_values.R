@@ -1,15 +1,16 @@
 # 20204-01-06 AndyP
 # Testing Seeds
-generate_inquisit_lists = T
+generate_inquisit_lists = F
+plot = F
 
 df <- data.frame(alpha = c(0.2), gamma = c(0.1),                 # model params
-                        beta = c(1), # at very high betas, h and u are decorrelated, no need to test
-                        epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
-                        block_length = c(10), # block length > 15 had higher correlations, not worth testing
-                        low_avg = c(10),
-                        iteration = c(152),
-                        #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
-                        seed = 1)
+                 beta = c(1), # at very high betas, h and u are decorrelated, no need to test
+                 epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
+                 block_length = c(10), # block length > 15 had higher correlations, not worth testing
+                 low_avg = c(10),
+                 iteration = c(6520),
+                 #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
+                 seed = 1)
 
 source('~/clock2/code/clock2_sim_crc_aep.R')
 setwd(output_dir)
@@ -101,45 +102,47 @@ write.csv(inq_tri,paste0('testing-Design-Matrix-',as.character(df$iteration[i]),
 
 d9 <- read_csv(paste0('/Users/andypapale/clock2/Inquisit_design_files/testing-Design-Matrix-',as.character(df$iteration[i]),'.csv'))
 
-if (!file.exists(paste0('/Users/andypapale/Desktop/seed-',df$seed[j],'-iteration-',as.character(df$iteration[i]),'-validation2'))){
-  dir.create(paste0('/Users/andypapale/Desktop/seed-',df$seed[j],'-iteration-',as.character(df$iteration[i]),'-validation2'))
-}
 
-## compare original value distribution to value distribution with erasures from the same seed
-setwd(paste0('/Users/andypapale/Desktop/seed-',df$seed[j],'-iteration-',as.character(df$iteration[i]),'-validation2'))
-val_cat <- NULL;
-oval_cat <- NULL;
-loc_cat <- NULL;
-e_trial <- NULL;
-for (iT in 1:300){
-  e_val <- d9_w_era %>% filter(trial==iT);
-  no_eval <- d9 %>% filter(trial==iT);
-  no_eval <- no_eval$value[round(e_val$RT)==round(era_loc[iT])]
-  e_val <- e_val$value[round(e_val$RT)==round(era_loc[iT])];
-  df_era <- data.frame(e_pos = era_loc[iT],e_val = e_val)
-  df_noera <- data.frame(e_pos = era_loc[iT],no_eval = no_eval)
-  pdf(paste0('iteration-',as.character(df$iteration[i]),'-trial-',iT,'.pdf'),height=12,width=12);
-  if (tt$erasure_segments$trial_type[iT] == 'erasure'){
-    gg1 <- ggplot(d9 %>% filter(trial==iT), aes(x=RT,y=value), color='black') +
-      geom_line() + geom_point(size=5,color='black') +
-      geom_line(data = d9_w_era %>% filter(trial==iT),aes(x=RT,y=value),color='red') +
-      geom_point(data = d9_w_era %>% filter(trial==iT),aes(x=RT,y=value),color='red') +
-      ylim(0,200) + geom_point(data = df_era, aes(x=e_pos,y=e_val),color='black',shape=2,size=10) +
-      ggtitle(paste0('trial ',iT,' trial_type = ', tt$erasure_segments$trial_type[iT],' erasure_val = ',e_val, ' erasure_RT = ',era_loc[iT]));
-  } else {
-    gg1 <-  ggplot(d9 %>% filter(trial==iT), aes(x=RT,y=value), color='black') +
-      geom_line() + geom_point(size=5,color='black') +
-      geom_line(data = d9_w_era %>% filter(trial==iT),aes(x=RT,y=value),color='red') +
-      geom_point(data = d9_w_era %>% filter(trial==iT),aes(x=RT,y=value),color='red') +
-      ylim(0,200) +
-      ggtitle(paste0('trial ',iT,' trial_type = ', tt$erasure_segments$trial_type[iT]));
+if (plot){
+  if (!file.exists(paste0('/Users/andypapale/Desktop/seed-',df$seed[j],'-iteration-',as.character(df$iteration[i]),'-validation2'))){
+    dir.create(paste0('/Users/andypapale/Desktop/seed-',df$seed[j],'-iteration-',as.character(df$iteration[i]),'-validation2'))
   }
-  # gg1 <- ggplot(d9 %>% filter(trial==iT), aes(x=RT,y=value)) + geom_line() + geom_point(size=5,color='black') +  ylim(0,200) +
-  #   ggtitle(paste0('trial ',iT,' trial_type = ', bb$erasure_segments$trial_type[iT], ' e_val = ',e_val, ' e_max = ',round(tt$erasure_segments$segment_max[iT]*180/pi)))
-  print(gg1);
-  dev.off()
+  
+  ## compare original value distribution to value distribution with erasures from the same seed
+  setwd(paste0('/Users/andypapale/Desktop/seed-',df$seed[j],'-iteration-',as.character(df$iteration[i]),'-validation2'))
+  val_cat <- NULL;
+  oval_cat <- NULL;
+  loc_cat <- NULL;
+  e_trial <- NULL;
+  for (iT in 1:300){
+    e_val <- d9_w_era %>% filter(trial==iT);
+    no_eval <- d9 %>% filter(trial==iT);
+    no_eval <- no_eval$value[round(e_val$RT)==round(era_loc[iT])]
+    e_val <- e_val$value[round(e_val$RT)==round(era_loc[iT])];
+    df_era <- data.frame(e_pos = era_loc[iT],e_val = e_val)
+    df_noera <- data.frame(e_pos = era_loc[iT],no_eval = no_eval)
+    pdf(paste0('iteration-',as.character(df$iteration[i]),'-trial-',iT,'.pdf'),height=12,width=12);
+    if (tt$erasure_segments$trial_type[iT] == 'erasure'){
+      gg1 <- ggplot(d9 %>% filter(trial==iT), aes(x=RT,y=value), color='black') +
+        geom_line() + geom_point(size=5,color='black') +
+        geom_line(data = d9_w_era %>% filter(trial==iT),aes(x=RT,y=value),color='red') +
+        geom_point(data = d9_w_era %>% filter(trial==iT),aes(x=RT,y=value),color='red') +
+        ylim(0,200) + geom_point(data = df_era, aes(x=e_pos,y=e_val),color='black',shape=2,size=10) +
+        ggtitle(paste0('trial ',iT,' trial_type = ', tt$erasure_segments$trial_type[iT],' erasure_val = ',e_val, ' erasure_RT = ',era_loc[iT]));
+    } else {
+      gg1 <-  ggplot(d9 %>% filter(trial==iT), aes(x=RT,y=value), color='black') +
+        geom_line() + geom_point(size=5,color='black') +
+        geom_line(data = d9_w_era %>% filter(trial==iT),aes(x=RT,y=value),color='red') +
+        geom_point(data = d9_w_era %>% filter(trial==iT),aes(x=RT,y=value),color='red') +
+        ylim(0,200) +
+        ggtitle(paste0('trial ',iT,' trial_type = ', tt$erasure_segments$trial_type[iT]));
+    }
+    # gg1 <- ggplot(d9 %>% filter(trial==iT), aes(x=RT,y=value)) + geom_line() + geom_point(size=5,color='black') +  ylim(0,200) +
+    #   ggtitle(paste0('trial ',iT,' trial_type = ', bb$erasure_segments$trial_type[iT], ' e_val = ',e_val, ' e_max = ',round(tt$erasure_segments$segment_max[iT]*180/pi)))
+    print(gg1);
+    dev.off()
+  }
 }
-
 if (generate_inquisit_lists){
   
   setwd('/Users/andypapale/clock2/Inquisit_design_files')
