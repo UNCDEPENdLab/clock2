@@ -157,7 +157,7 @@ design <- inner_join(design, epoch,by = c('trial','seed'))
 
 #df0 <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_5815_testing_raw_1_2023-12-19-18-37-19-595.csv')
 
-df0 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_01-09/raw/2023-01-09-Raw-noValueVector.csv')
+df0 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_01-09/raw/2024-01-09-Raw-noValueVector.csv')
 
 df0 <- df0 %>% filter(trialcode == 'feedback')
 df0 <- df0 %>% mutate(u_present = case_when(trial_type == 'erasure' ~ TRUE,
@@ -286,4 +286,14 @@ for (i in 1:1000) {
 ddf <- rbindlist(mlist)
 str(ddf)
 mean_ddf <- ddf %>% filter(effect == "fixed") %>% select(-i, -effect, -group) %>% group_by(term) %>% summarise_all(mean)
+
+
+# test ITI/ISI
+
+df0$ITI <- scale(df0$list.ITI.currentvalue)
+df0 <- df0 %>% group_by(subject,block) %>% mutate(ISI_lag = lag(list.ISI.currentvalue)) %>% ungroup()
+df0$ISI_lag <- scale(df0$ISI_lag)
+
+m1 <- lmerTest::lmer(pos_shifted ~ scale(vmax_location)*scale(vmax)*ISI_lag*ITI + scale(resp_theta_c_lag)*outcome_lag*ISI_lag*ITI + (1|subject), df0)
+summary(m1)
 
