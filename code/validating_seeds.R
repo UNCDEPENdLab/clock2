@@ -1,16 +1,18 @@
 df <- data.frame(alpha = c(0.2), gamma = c(0.1),                 # model params
-                        beta = c(1), # at very high betas, h and u are decorrelated, no need to test
-                        epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
-                        block_length = c(10), # block length > 15 had higher correlations, not worth testing
-                        low_avg = c(10),
-                        iteration = c(152),
-                        #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
-                        seed = 1)
+                 beta = c(1), # at very high betas, h and u are decorrelated, no need to test
+                 epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
+                 block_length = c(10), # block length > 15 had higher correlations, not worth testing
+                 low_avg = c(10),
+                 iteration = c(152),
+                 #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
+                 seed = 1)
 
 source('~/clock2/code/clock2_sim_crc_aep.R')
 setwd(output_dir)
 i = 1
 j = 1
+
+## get values with erasures
 set.seed(df$iteration[i])
 ncenters <- 9 # how many gaussians there are
 mean_val <- 10 # mean reward rate
@@ -18,53 +20,33 @@ sd_val <- 2 # standard deviation of reward / range of rewards
 centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
 values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
 width_sd <- 0.349 # fixed, how wide are the underlying Gaussians
-sanity_checks = F # diagnostic plots inside simulation loop
 ntrials = 300
 bump_prominence <- 10
 bump_value <- mean_val * bump_prominence
 bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
-setwd(base_dir)
-gg <- iterate_sim(df, bump_prominence, ncenters, centers, values, width_sd, i, j)
-cc <- round(gg$get_values_matrix(type = 'objective', quiet = F),0)
+contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians")
+tt <- troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=1)
+tt$apply_flex(high_avg = 1, high_spread = 0, low_avg = df$low_avg[i], spread_max = 100, jump_high = T)
+tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 2, block_length = df$block_length[i])
+sceptic_agent <- scepticc$new(n_basis=12, n_points=200, contingency=tt)
+sceptic_agent$alpha <- alpha <- df$alpha[i]
+sceptic_agent$beta <- beta <- df$beta[i]
+sceptic_agent$gamma <- gamma <- df$gamma[i]
+sceptic_agent$epsilon_u <- epsilon_u <- df$epsilon_u[i]
+for (j in 1:length(df$seed)){
+  set.seed(df$seed[j])
+  learning_history <- sceptic_agent$run_contingency(optimize = FALSE)
+}
+cc <- round(tt$get_values_matrix(type = 'objective', quiet = F),0)
 inq_tri <- data.frame(cc)
 inq_tri <- inq_tri %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = readr::parse_number(RT))
 inq_tri <- inq_tri %>% arrange(trial,RT)
 setwd('/Users/andypapale/clock2/Inquisit_design_files/')
-write.csv(inq_tri,paste0('Design-Matrix-with-Erasures-',as.character(df$iteration),'.csv'))
-
-set.seed(df$iteration[i])
-ncenters <- 9 # how many gaussians there are
-mean_val <- 10 # mean reward rate
-sd_val <- 2 # standard deviation of reward / range of rewards
-centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
-values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
-width_sd <- 0.349 # fixed, how wide are the underlying Gaussians
-sanity_checks = F # diagnostic plots inside simulation loop
-ntrials = 300
-i = 1
-j = 1
-cat(sprintf("In loop i: %d, j: %d\n", i, j), file = "run_log.txt", append=T)
-# set up contingency
-bump_prominence <- 10
-bump_value <- mean_val * bump_prominence
-bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
-setwd(base_dir)
-dd <- iterate_sim(df, bump_prominence, ncenters, centers, values, width_sd, i, j)
-rm(dd)
-contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians")
-qq <- troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=1)
-qq$apply_flex(high_avg = 1, high_spread = 0, low_avg = df$low_avg[i], spread_max = 100, jump_high = T)
-dd <- round(qq$get_values_matrix(type = 'objective', quiet = F),0)
-
-# for (r in 1:nrow(dd)) {
-#   plot(dd[r,])
-#   print(r)
-#   Sys.sleep(.2)
-# }
+write.csv(inq_tri,paste0('testing-Design-Matrix-with-Erasures-',as.character(df$iteration[i]),'.csv'))
 
 # write erasure schedule
-seg_min <- gg$erasure_segments$segment_min*180/pi;
-seg_max <- gg$erasure_segments$segment_max*180/pi;
+seg_min <- tt$erasure_segments$segment_min*180/pi;
+seg_max <- tt$erasure_segments$segment_max*180/pi;
 era_loc <- NULL;
 for (iT in 1:300){
   if (!is.na(seg_max[iT])){
@@ -84,8 +66,44 @@ for (iT in 1:300){
     era_loc[iT] <- NA;
   }
 }
-setwd('/Users/andypapale/Desktop/2023-12-22-Testing/data')
-df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-08-18-34-01-988.csv');
+d9_w_era <- read_csv(paste0('/Users/andypapale/clock2/Inquisit_design_files/testing-Design-Matrix-with-Erasures-',as.character(df$iteration[i]),'.csv'))
+
+
+## get values without erasures
+set.seed(df$iteration[i])
+ncenters <- 9 # how many gaussians there are
+mean_val <- 10 # mean reward rate
+sd_val <- 2 # standard deviation of reward / range of rewards
+centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
+values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
+width_sd <- 0.349 # fixed, how wide are the underlying Gaussians
+sanity_checks = F # diagnostic plots inside simulation loop
+ntrials = 300
+i = 1
+j = 1
+# set up contingency
+bump_prominence <- 10
+bump_value <- mean_val * bump_prominence
+bump_center <- sample(seq(0, 2*pi, by = pi/20), 1, replace = FALSE)
+contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians")
+qq <- troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=1)
+qq$apply_flex(high_avg = 1, high_spread = 0, low_avg = df$low_avg[i], spread_max = 100, jump_high = T)
+aa <- round(qq$get_values_matrix(type = 'objective', quiet = F),0)
+inq_tri <- data.frame(aa)
+inq_tri <- inq_tri %>% mutate(trial = row_number()) %>% rowwise() %>% pivot_longer(cols = starts_with("X"), names_to = "RT") %>% mutate(RT = readr::parse_number(RT))
+inq_tri <- inq_tri %>% arrange(trial,RT)
+setwd('/Users/andypapale/clock2/Inquisit_design_files/')
+write.csv(inq_tri,paste0('testing-Design-Matrix-',as.character(df$iteration[i]),'.csv'))
+
+d9 <- read_csv(paste0('/Users/andypapale/clock2/Inquisit_design_files/testing-Design-Matrix-',as.character(df$iteration[i]),'.csv'))
+
+#setwd('/Users/andypapale/Desktop/2023-12-22-Testing/data')
+# no clicks testing
+df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-24-18-15-16-107.csv')
+#df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-08-18-34-01-988.csv');
+#df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_6520_fMRI_raw_1_2024-01-10-16-55-04-979.csv')
+#df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-23-21-25-55-768.csv')
+#df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-24-18-03-24-721.csv')
 #df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-04-17-23-27-494.csv')
 #df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_2534_testing_raw_1_2024-01-04-17-32-42-019.csv')
 #df <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-02-23-57-16-667.csv')

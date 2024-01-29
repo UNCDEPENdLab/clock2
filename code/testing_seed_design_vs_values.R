@@ -1,6 +1,6 @@
 # 20204-01-06 AndyP
 # Testing Seeds
-generate_inquisit_lists = F
+generate_inquisit_lists = T
 plot = F
 
 df <- data.frame(alpha = c(0.2), gamma = c(0.1),                 # model params
@@ -8,7 +8,7 @@ df <- data.frame(alpha = c(0.2), gamma = c(0.1),                 # model params
                  epsilon_u = c(0.9999), # 0.0833 is at chance, low correlation -- not worth testing
                  block_length = c(10), # block length > 15 had higher correlations, not worth testing
                  low_avg = c(10),
-                 iteration = c(6520),
+                 iteration = c(152),
                  #drift = c(1, 2, 4), bump_prom = c(8, 10, 15),
                  seed = 1)
 
