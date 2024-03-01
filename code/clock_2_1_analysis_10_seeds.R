@@ -11,53 +11,63 @@ library(BAMBI)
 library(pracma)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-152.csv'
 d1 <- read_csv(design_file)
-d1$value <- circshift(d1$value, 90)
+dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d1$value[d1$trial==iT],90)))}
+d1$value = dx;
 d1 <- d1 %>% group_by(trial) %>% summarise(vmax = max(value),
                                                    vmax_location = RT[which.max(value)]) %>% mutate(seed = 152)
 
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-868.csv'
 d2 <- read_csv(design_file)
-d2$value <- circshift(d2$value, 90)
+dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d2$value[d2$trial==iT],90)))}
+d2$value = dx;
 d2 <- d2 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 868)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-1464.csv'
 d3 <- read_csv(design_file)
-d3$value <- circshift(d3$value, 90)
+dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d3$value[d3$trial==iT],90)))}
+d3$value = dx;
 d3 <- d3 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 1464)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-1752.csv'
 d4 <- read_csv(design_file)
-d4$value <- circshift(d4$value, 90)
+dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d4$value[d4$trial==iT],90)))}
+d4$value = dx;
 d4 <- d4 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 1752)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-2534.csv'
 d5 <- read_csv(design_file)
-d5$value <- circshift(d5$value, 90)
+dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d5$value[d5$trial==iT],90)))}
+d5$value = dx;
 d5 <- d5 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 2534)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-4938.csv'
 d6 <- read_csv(design_file)
-d6$value <- circshift(d6$value, 90)
+dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d6$value[d6$trial==iT],90)))}
+d6$value = dx;
 d6 <- d6 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 4938)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-5094.csv'
 d7 <- read_csv(design_file)
-d7$value <- circshift(d7$value, 90)
+dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d7$value[d7$trial==iT],90)))}
+d7$value = dx;
 d7 <- d7 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 5094)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-5173.csv'
 d8 <- read_csv(design_file)
-d8$value <- circshift(d8$value, 90)
+dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d8$value[d8$trial==iT],90)))}
+d8$value = dx;
 d8 <- d8 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 5173)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-5815.csv'
 d9 <- read_csv(design_file)
-d9$value <- circshift(d9$value, 90)
+dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d9$value[d9$trial==iT],90)))}
+d9$value = dx;
 d9 <- d9 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 5815)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-6520.csv'
 d10 <- read_csv(design_file)
-d10$value <- circshift(d10$value, 90)
+dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d10$value[d10$trial==iT],90)))}
+d10$value = dx;
 d10 <- d10 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 6520)
 design <- rbind(d1,d2,d3,d4,d5,d6,d7,d8,d9,d10)
