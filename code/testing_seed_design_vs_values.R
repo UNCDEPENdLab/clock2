@@ -1,7 +1,7 @@
 # 20204-01-06 AndyP
 # Testing Seeds
 generate_inquisit_lists = T
-plot = F
+plot = T
 
 df <- data.frame(alpha = c(0.2), gamma = c(0.1),                 # model params
                  beta = c(1), # at very high betas, h and u are decorrelated, no need to test

@@ -306,7 +306,7 @@ df0 <- df0 %>% group_by(subject,block) %>% mutate(ISI_lag = lag(list.ISI.current
 df0$ISI_lag <- scale(df0$ISI_lag)
 
 m2 <- lmerTest::lmer(pos_shifted ~ scale(vmax_location)*scale(vmax)*ISI_lag*ITI + scale(resp_theta_c_lag)*outcome_lag*ISI_lag*ITI + (1|subject), df0)
-summary(m1)
+summary(m2)
 
 df <- df0
 mlist <- list()

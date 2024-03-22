@@ -99,7 +99,9 @@ d9 <- read_csv(paste0('/Users/andypapale/clock2/Inquisit_design_files/testing-De
 
 #setwd('/Users/andypapale/Desktop/2023-12-22-Testing/data')
 # no clicks testing
-df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-24-18-15-16-107.csv')
+
+df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-03-22-21-28-30-908.csv')
+#df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-24-18-15-16-107.csv')
 #df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-08-18-34-01-988.csv');
 #df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_6520_fMRI_raw_1_2024-01-10-16-55-04-979.csv')
 #df_inq <- read_csv('/Users/andypapale/Inquisit Code/EEG_clock/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-23-21-25-55-768.csv')
@@ -143,7 +145,7 @@ for (iT in 1:300){
   oeval <- oeval$value[round(oeval$RT)==round(era_loc[iT])];
   df_era <- data.frame(matrix(nrow = 0, ncol = length(columns)))
   colnames(df_era) = columns
-  if (gg$erasure_segments$trial_type[iT]=='erasure'){
+  if (tt$erasure_segments$trial_type[iT]=='erasure'){
     era_loc2 <- inq_e_val$erasure_RT[1];
     e_val_inq <- inq_e_val$erasure_value[1];
     df_era <- data.frame(e_pos = era_loc[iT],e_val = e_val)
@@ -151,10 +153,10 @@ for (iT in 1:300){
     oval_cat <- rbind(oval_cat, oeval)
     loc_cat <- rbind(loc_cat,era_loc[iT])
     e_trial <- rbind(e_trial,iT)
-  } else if (gg$erasure_segments$trial_type[iT]=='attention'){
+  } else if (tt$erasure_segments$trial_type[iT]=='attention'){
     era_loc2 <- inq_e_val$stim_center_deg[1];
     e_val_inq <- NULL;
-  } else if (gg$erasure_segments$trial_type[iT]=='no erasure'){
+  } else if (tt$erasure_segments$trial_type[iT]=='no erasure'){
     era_loc2 <- NULL;
     e_val_inq <- NULL;
   }
@@ -165,14 +167,14 @@ for (iT in 1:300){
      geom_line(data = df0 %>% filter(trial==iT),aes(x=x_final,y=y_final),color='red') +
      geom_point(data = df0 %>% filter(trial==iT),aes(x=x_final,y=y_final),color='red') +
      ylim(0,200) + geom_point(data = df_era, aes(x=e_pos,y=e_val),color='black',shape=2,size=10) +
-     ggtitle(paste0('trial ',iT,' trial_type = ', gg$erasure_segments$trial_type[iT], ' trial_type_inq = ',inq_e_val$trial_type[1],' e_val = ',e_val, ' inq_e_val =', e_val_inq, ' e_max = ',round(gg$erasure_segments$segment_max[iT]*180/pi), ' inq_e_loc = ', era_loc2));
+     ggtitle(paste0('trial ',iT,' trial_type = ', tt$erasure_segments$trial_type[iT], ' trial_type_inq = ',inq_e_val$trial_type[1],' e_val = ',e_val, ' inq_e_val =', e_val_inq, ' e_max = ',round(tt$erasure_segments$segment_max[iT]*180/pi), ' inq_e_loc = ', era_loc2));
   } else {
     gg1 <-  ggplot(d9 %>% filter(trial==iT), aes(x=RT,y=value), color='black') +
       geom_line() + geom_point(size=5,color='black') +
       geom_line(data = df0 %>% filter(trial==iT),aes(x=x_final,y=y_final),color='red') +
       geom_point(data = df0 %>% filter(trial==iT),aes(x=x_final,y=y_final),color='red') +
       ylim(0,200) +
-      ggtitle(paste0('trial ',iT,' trial_type = ', gg$erasure_segments$trial_type[iT], ' trial_type_inq = ',inq_e_val$trial_type[1]));
+      ggtitle(paste0('trial ',iT,' trial_type = ', tt$erasure_segments$trial_type[iT], ' trial_type_inq = ',inq_e_val$trial_type[1]));
   }
       # gg1 <- ggplot(d9 %>% filter(trial==iT), aes(x=RT,y=value)) + geom_line() + geom_point(size=5,color='black') +  ylim(0,200) +
   #   ggtitle(paste0('trial ',iT,' trial_type = ', bb$erasure_segments$trial_type[iT], ' e_val = ',e_val, ' e_max = ',round(tt$erasure_segments$segment_max[iT]*180/pi)))
