@@ -163,8 +163,11 @@ world$erasure_segments
 # dynamic contingency
 ttd <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=5)
 ttd$apply_flex(high_avg = 1, high_spread = 0, low_avg = 10, spread_max = 150, jump_high = T)
+ttd$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
 plot(ttd$get_starting_values())
 plot(ttd$spread)
+
+
 sceptic_agent <- scepticc$new(n_basis=12, n_points=200, contingency=ttd)
 
 
@@ -185,7 +188,7 @@ df <- cbind(learning_history, h, spread)
 # ggplot(obj_f, aes(x=choice, y=value)) + geom_line() +
 #   geom_point(data = learning_history, mapping=aes(x=choice, y=outcome, color=trial))
 cor.test(df$h, lag(df$spread, 10))
-ggplot(df, aes(x=trial, y=outcome, color=choice)) + geom_point() +
+ggplot(df, aes(x=trial, y=outcome, color=choice_rad)) + geom_point() +
   stat_smooth()
 
 ggplot(df) + geom_line( aes(x=trial, y=h*2)) + geom_point(aes(x = trial, y = choice, color = outcome)) + 
