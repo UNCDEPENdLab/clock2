@@ -1,3 +1,8 @@
+setwd("~/Data_Analysis/clock2")
+source("code/von_mises_basis.R")
+source("code/clock2_troll_world.R")
+source("code/scepticc.R")
+
 # scepticc inversion in stan
 ncenters <- 9 # how many gaussians there are
 mean_val <- 10 # mean reward rate
@@ -8,6 +13,7 @@ width_sd <- 20 # fixed, how wide are the underlying Gaussians
 
 bump_prominence <- 8 # bump will always be higher, but it will change
 bump_value <- mean_val * bump_prominence
+bump_center <- sample(seq(0, 360, by = 10), 1, replace = FALSE)
 
 centers <- (pi / 180) * centers
 width_sd <- (pi / 180) * width_sd
@@ -17,8 +23,8 @@ contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights 
 ttd <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=5)
 ttd$apply_flex(high_avg = 1, high_spread = 0, low_avg = 10, spread_max = 150, jump_high = T)
 ttd$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
-plot(ttd$get_starting_values())
-plot(ttd$spread)
+# plot(ttd$get_starting_values())
+# plot(ttd$spread)
 
 
 
@@ -34,7 +40,7 @@ generate_scepticc_data <- function(n=25, contingency = NULL) {
   
   beta_m <- 0.1
   beta_sd <- 2
-  betas <- rtruncnorm(n, a=0, mean=beta_m, sd=beta_sd)
+  betas <- rtruncnorm(n, a=0.001, mean=beta_m, sd=beta_sd)
   
   gamma_m <- 0.3
   gamma_sd <- 0.1
@@ -47,7 +53,7 @@ generate_scepticc_data <- function(n=25, contingency = NULL) {
   epsilon_u_m <- 1/12 # 8%
   epsilon_u_sd <- 1/8
   epsilon_us <- rtruncnorm(n, a=0, b=1, mean=epsilon_u_m, sd=epsilon_u_sd)
-    
+
   epsilon_a_m <- 1/12 # 8%
   epsilon_a_sd <- 1/8
   epsilon_as <- rtruncnorm(n, a=0, b=1, mean=epsilon_a_m, sd=epsilon_a_sd)
@@ -69,8 +75,81 @@ generate_scepticc_data <- function(n=25, contingency = NULL) {
   
 }
 
-ff <- generate_scepticc_data(n=25, contingency = ttd)
+nsubj <- 25
+ff <- generate_scepticc_data(n = nsubj, contingency = ttd)
 
+outcomes <- ff %>%
+  select(id, trial, outcome) %>%
+  pivot_wider(id_cols = "id", names_from = "trial", values_from = "outcome") %>%
+  select(-id) %>%
+  as.matrix()
+
+choices <- ff %>%
+  select(id, trial, choice_rad) %>%
+  pivot_wider(id_cols = "id", names_from = "trial", values_from = "choice_rad") %>%
+  select(-id) %>%
+  as.matrix()
+
+trial_types <- ff %>%
+  select(id, trial, trial_type) %>%
+  pivot_wider(id_cols = "id", names_from = "trial", values_from = "trial_type") %>%
+  select(-id) %>%
+  as.matrix() %>%
+  apply(c(1,2), function(x) switch(x, "no erasure"=1, "erasure"=2, "attention"=3))
+
+segment_shown <- ff %>%
+  select(id, trial, segment_shown) %>%
+  pivot_wider(id_cols = "id", names_from = "trial", values_from = "segment_shown") %>%
+  select(-id) %>%
+  as.matrix() %>%
+  apply(c(1,2), function(x) if (is.na(x)) 0 else x) # replace NA with 0
+
+
+data_list <- list(
+  B = 12,
+  P = 120,
+  N = nsubj,
+  T = 300,
+  Tsubj = rep(300, nsubj),
+  sb = 0.3,
+  sg = 0.3,
+  outcomes = outcomes,
+  choices = choices,
+  trial_types = trial_types,
+  segment_shown = segment_shown
+)
+
+niter  <- 4000
+nwarmup <- 1000
+nchain <- 4
+ncore <- 4
+options(mc.cores = ncore)
+
+nthin          = 1
+          #  inits          = "vb",
+          #  indPars        = "mean",
+          #  modelRegressor = FALSE,
+          #  vb             = FALSE,
+          #  inc_postpred   = FALSE,
+adapt_delta    = 0.95
+stepsize       = 1
+max_treedepth  = 10
+
+stanmodel_arg <- "/Users/hallquist/Data_Analysis/clock2/code/scepticc.stan"
+sm <- rstan::stan_model(stanmodel_arg)
+
+
+fit <- rstan::sampling(object  = sm,
+                        data    = data_list,
+                        #pars    = pars,
+                        #init    = gen_init,
+                        chains  = nchain,
+                        iter    = niter,
+                        warmup  = nwarmup,
+                        thin    = nthin,
+                        control = list(adapt_delta   = adapt_delta,
+                                      stepsize      = stepsize,
+                                      max_treedepth = max_treedepth))                             
 
 
 stan_str <- "

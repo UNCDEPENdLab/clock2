@@ -182,13 +182,25 @@ scepticc <- R6::R6Class(
       # print(private$pvt_bf_set$get_wfunc())
       # lookup choice against positions in radians
       seg <- private$pvt_contingency$get_cur_segment()
-      
-      if (seg$trial_type=="erasure" && runif(1, 0, 1) < private$pvt_epsilon_u) {
-        # sample randomly within the erased segment 
-        return(runif(1, seg$segment_min + 1e-3, seg$segment_max - 1e-3))
-      } else if (seg$trial_type=="attention" && runif(1, 0, 1) < private$pvt_epsilon_a) {
+
+      # handle wraparound at 0
+      if (seg$trial_type != "no erasure") {
+        if (seg$segment_min > seg$segment_max) {
+          l <- seg$segment_min
+          u <- 2 * pi + seg$segment_max
+          w <- runif(1, l + 1e-3, u - 1e-3)
+          w <- if (w > 2 * pi) w - 2 * pi else w
+        } else {
+          w <- runif(1, seg$segment_min + 1e-3, seg$segment_max - 1e-3)
+        }
+      } 
+    
+      if (seg$trial_type == "erasure" && runif(1, 0, 1) < private$pvt_epsilon_u) {
         # sample randomly within the erased segment
-        return(runif(1, seg$segment_min + 1e-3, seg$segment_max - 1e-3))
+        return(w)
+      } else if (seg$trial_type == "attention" && runif(1, 0, 1) < private$pvt_epsilon_a) {
+        # sample randomly within the erased segment
+        return(w)
       } else {
         # sample according to value
         s <- sample(seq_len(private$pvt_n_points), 1, prob = self$get_choice_probs())
