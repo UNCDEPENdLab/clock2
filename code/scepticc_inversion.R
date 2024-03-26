@@ -1,7 +1,12 @@
-setwd("~/Data_Analysis/clock2")
-source("code/von_mises_basis.R")
-source("code/clock2_troll_world.R")
-source("code/scepticc.R")
+repo_dir <- "~/Data_Analysis/clock2"
+setwd(repo_dir)
+source(file.path(repo_dir, "code", "von_mises_basis.R"))
+source(file.path(repo_dir, "code", "clock2_troll_world.R"))
+source(file.path(repo_dir, "code", "scepticc.R"))
+
+library(tidyverse)
+library(ggplot2)
+library(rstan)
 
 # scepticc inversion in stan
 ncenters <- 9 # how many gaussians there are
@@ -26,8 +31,7 @@ ttd$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
 # plot(ttd$get_starting_values())
 # plot(ttd$spread)
 
-
-
+# helper functino to generate multi-subject data
 generate_scepticc_data <- function(n=25, contingency = NULL) {
   require(truncnorm)
   if (!inherits(contingency, "troll_world")) stop("contingency must be troll_world object")
@@ -105,40 +109,47 @@ segment_shown <- ff %>%
   apply(c(1,2), function(x) if (is.na(x)) 0 else x) # replace NA with 0
 
 
+# round choices in radians onto positions vector/points -- superseded by internal bincode function in stan
+choices_to_pbins <- function(choices, bins=120) {
+  d_theta <- 2 * pi / bins
+        
+  # since circle wraps, we want to avoid adding a redundant basis function at 0 vs. at 2*pi
+  pvec <- seq(0, 2 * pi - d_theta, length.out = bins)
+  choices[] <- Hmisc::cut2(choices, cuts = pvec)
+  return(choices)
+}
+
+rc <- choices_to_pbins(choices)
+
+# setup inputs to Stan
 data_list <- list(
-  B = 12,
-  P = 120,
+  B = 12, # 12 basis functions
+  P = 120, # 120 evaluation points for value
   N = nsubj,
   T = 300,
   Tsubj = rep(300, nsubj),
-  sb = 0.3,
-  sg = 0.3,
+  sb = 0.3, # SD of basis functions in radians
+  sg = 0.3, # SD of generalization function in radians
   outcomes = outcomes,
-  choices = choices,
+  choices_rad = choices,
   trial_types = trial_types,
   segment_shown = segment_shown
 )
 
-niter  <- 4000
-nwarmup <- 1000
-nchain <- 4
-ncore <- 4
 options(mc.cores = ncore)
+niter  <- 600
+nwarmup <- 100
+nchain <- 2
+ncore <- 4
+nthin <- 1
+adapt_delta <- 0.95
+stepsize <- 1
+max_treedepth <- 10
 
-nthin          = 1
-          #  inits          = "vb",
-          #  indPars        = "mean",
-          #  modelRegressor = FALSE,
-          #  vb             = FALSE,
-          #  inc_postpred   = FALSE,
-adapt_delta    = 0.95
-stepsize       = 1
-max_treedepth  = 10
+stanmodel_arg <- file.path(repo_dir, "code", "scepticc.stan")
+sm <- rstan::stan_model(stanmodel_arg) # compile model
 
-stanmodel_arg <- "/Users/hallquist/Data_Analysis/clock2/code/scepticc.stan"
-sm <- rstan::stan_model(stanmodel_arg)
-
-
+# MCMC
 fit <- rstan::sampling(object  = sm,
                         data    = data_list,
                         #pars    = pars,
@@ -152,95 +163,134 @@ fit <- rstan::sampling(object  = sm,
                                       max_treedepth = max_treedepth))                             
 
 
-stan_str <- "
-functions {
-  ## parallel minimum function: DONE
-  vector pmin(vector a, vector b) {
-    if (num_elements(b) != num_elements(a))
-      reject('Number of elements in a and b vectors to pmin are unequal');
+parVals <- rstan::extract(fit, permuted = TRUE)
+
+# Quick estimation with 1 iteration to get computed quantities for debugging
+fit_debug <- rstan::sampling(
+  object = sm, data = data_list,
+  chains = 1, iter = 2, warmup = 0, thin = nthin,
+  control = list(
+    adapt_delta = adapt_delta,
+    stepsize = stepsize,
+    max_treedepth = max_treedepth
+  )
+)
+
+# examine basis
+basis <- extract(fit_debug)$p_Phi[1, , ]
+bdf <- reshape2::melt(basis, varnames = c("basis", "point"))
+ggplot(bdf, aes(x = point, y = value, color = factor(basis))) + geom_line() # looks good
+
+# compare against generation in R
+n_basis <- 12
+d_theta <- (2 * pi) / n_basis
+basis_sd <- rep(0.3, 12)
+weights_0 <- rep(0, 12)
       
-    vector[num_elements(b)] res;
-    for(i in 1:num_elements(b)) {
-      res[i] = min({a[i], b[i]});
-    }
+# since circle wraps, we want to avoid adding a redundant basis function at 0 vs. at 2*pi
+loc <- seq(0, 2*pi - d_theta, by=d_theta)
+vset <- lapply(seq_along(loc), function(ii) {
+  vm_bf$new(n_points = 120, center=loc[ii], width_sd=basis_sd[ii], weight=weights_0[ii])
+})
 
-    return res;
-  }
-  
-  # compute proportion overlap between two vectors: DONE
-  real compute_overlap(vector b1, vector b2) {
-    real s1 = sum(b1);
-    if (abs(s1) - 1.0 > 1e-5)
-      reject('b1 does not sum to 1');
-    
-    real s2 = sum(b2);
-    if (abs(s2) - 1.0 > 1e-5) 
-      reject('b2 does not sum to 1');
-    
-    real res = sum(pmin(b1, b2));
-    return(res);
-  }
-  
-  # von mises basis in radians
-  vector vm_pdf(int n, real mu, real sd) {
-  
-    // generate positions between 0 and 2*pi
-    vector x = linspaced_vector(n, low, 2*pi);
+bf_set <- rbf_set$new(elements = vset)
+basis_r <- t(bf_set$get_basis())
 
-    real kappa = 1/sd; // concentration parameter
-    
-    // von Mises probability density function (pdf)
-    // note that modified_bessel_first_kind takes order (0), then argument (kappa)
-    pdf = exp(kappa * cos(x - mu)) / (2 * pi * modified_bessel_first_kind(0, kappa))
-    
-    // need sum to normalize pdf to AUC 1.0
-    real s = sum(pdf);
+summary(basis - basis_r)
+all.equal(basis, basis_r) # TRUE -- YAY!
 
-    pdf = pdf / s
-    
-    return(pdf)
-    }
-    
-}
-          private$compute_overlap(e$get_basis(), efunc$get_basis())
+# examine different approaches to binning data
+mv <- 2*pi # maximum value
+np <- 120 # number of points
+d_theta <- 2*pi/np
+pvec <- seq(0, 2 * pi - d_theta, by = d_theta) # positions vector
 
-  #### update vm basis weights: tau is chosen point on circle
-  vector update_weights(real tau, real elig_sd, real outcome, vector w, ) {
-    int n_w = num_elements(w);
-    
-    // create eligibility function centering on tau
-    
-    
-    vector e[n_w];
-    for (i in 1:n_w) {
-      e[i] = compute_overlap()
-    }
-    
-            private$compute_overlap(e$get_basis(), efunc$get_basis())
-  
-      checkmate::assert_number(tau)
-      private$pvt_eligibility$center <- tau
-      vector e
-      e <- private$pvt_bf_set$get_eligibilities(private$pvt_eligibility)
-      w <- private$pvt_bf_set$get_weights()
-      pe <-  outcome - w
-      
-      int model = 1;
-      if (model == 1) {
-        decay <- -self$gamma * (1-e) * w  
-      } else {
-        decay <- 0
-      }
-      
-      w_new <- w + self$alpha*e*pe + decay
-      private$pvt_bf_set$set_weights(w_new)
-      private$pvt_history[[private$pvt_sample]] <- w_new
-      private$pvt_sample <- private$pvt_sample + 1
-      return(self)
-    }
+# 0-359 degrees in radians
+## dd <- seq(0, 2 * pi - (2 * pi / 360), length.out = 360)
+## dd * 180 / pi
 
-}
-"
+# allow wrap
+dd <- seq(0, 2 * pi - 1e-3, length.out = 361)
 
+# look more finely in degrees
+dd <- seq(0, 360, by = 0.25)
 
+pvec <- seq(0, 360, length.out=121)
+table(.bincode(dd, pvec, include.lowest = FALSE)) # function used by cut() in R
 
+# look at approach of using rounding to bin
+mv <- 360
+vv <- round((np - 1) * dd / mv) + 1
+df <- data.frame(dd, vv)
+df %>%
+  group_by(vv) %>%
+  summarise(mi = min(dd), ma = max(dd), di = max(dd) - min(dd)) %>%
+  View()
+
+# c++ friendly -- but not as accurate as .bincode
+vv <- round((np - 1) * dd / mv) + 1
+# vv2 <- round(dd / (mv - pi / 180) * (np - 1)) + 1
+
+# subtract off overlap
+# vv <- round((np - 1) * dd / (mv - (pi / 180))) + 1
+
+rr <- as.integer(Hmisc::cut2(dd, cuts = pvec))
+rr2 <- as.integer(cut(dd, 120))
+rr3 <- choices_to_pbins(dd, 120)
+cbind(vv, rr, rr2, rr3)
+cor(vv, rr)
+
+# conclusion: .bincode gives the greatest control by enforcing precise bin boundaries
+
+# Eligibility of each basis function based on location of choice -- looks good!
+EB <- extract(fit_debug)$p_EB[1, , ]
+edf <- reshape2::melt(EB, varnames=c("point", "basis"))
+ggplot(edf, aes(x = point, y = value, color = factor(basis))) + geom_line()
+
+# Resolve complexity of defining evaluation points *centers* in pvec versus bins that span those centers
+# Define bins based on evaluation point centers
+# Also check .bincode approach against stan-based port/implementation
+P <- 120
+d_theta = 2*pi/P
+
+pvec <- seq(1/2*d_theta, 2 * pi - 1/2*d_theta, length.out = P)
+
+# we have p+1 cuts, with the last at 2pi
+cuts <- c(pvec - 1 / 2 * d_theta, 2 * pi)
+
+dd <- seq(0, 2*pi, length.out=240)
+bb <- .bincode(dd, cuts, include.lowest = TRUE)
+
+table(bb)
+cbind(dd*180/pi, bb)
+
+choices_binned <- extract(fit_debug)$p_choices[1, , ]
+
+ee <- extract(fit_debug)
+ee$p_pvec[1,]
+all.equal(ee$p_breaks[1, ], cuts) # TRUE -- GOOD!
+which(abs(ee$p_breaks[1, ] - cuts) > .05)
+
+summary(diff(diff(cuts)))
+summary(diff(diff(ee$p_breaks[1, ])))
+
+# match
+cuts[115:121]
+ee$p_breaks[1,115:121]
+
+# compare stan against local cutting
+loc <- apply(choices, c(1, 2), .bincode, breaks = cuts, include.lowest = TRUE)
+attr(loc, "dimnames") <- NULL
+loc[1:10, 1:10]
+choices_binned[1:10, 1:10]
+
+# excellent
+all.equal(loc, choices_binned) # TRUE
+
+# compare against older cut2 approach above
+str(rc)
+str(choices_binned)
+summary(choices_binned - rc)
+cor(as.vector(rc), as.vector(choices_binned))
+choices_binned[1:10, 1:10]
+rc[1:10, 1:10]
