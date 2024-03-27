@@ -54,10 +54,13 @@ write.csv(inq_tri,paste0('testing-Design-Matrix-with-Erasures-',as.character(df$
 seg_min <- tt$erasure_segments$segment_min*180/pi;
 seg_max <- tt$erasure_segments$segment_max*180/pi;
 era_loc <- NULL;
+era_val <- NULL;
+val_min <- NULL;
+val_max <- NULL;
 for (iT in 1:300){
   if (!is.na(seg_max[iT])){
     if (seg_max[iT] < 31){
-      # then seg_min >= 360
+      # then era_loc >= 360
       if (seg_max[iT] < 16){
         # then era_loc > 15
         era_loc[iT] <- seg_min[iT] + 15;
@@ -68,8 +71,18 @@ for (iT in 1:300){
     } else {
       era_loc[iT] <- seg_min[iT] + 15;
     }
+    temp <- inq_tri %>% filter(trial==iT);
+    temp1 <- temp %>% filter(RT==round(era_loc[iT]));
+    era_val[iT] <- temp1$value;
+    temp2 <- temp %>% filter(RT==round(seg_min[iT]));
+    val_min[iT] <- temp2$value;
+    temp3 <- temp %>% filter(RT==round(seg_max[iT]));
+    val_max[iT] <- temp3$value;
   } else {
     era_loc[iT] <- NA;
+    era_val[iT] <- NA;
+    val_min[iT] <- NA;
+    val_max[iT] <- NA;
   }
 }
 d9_w_era <- read_csv(paste0('/Users/andypapale/clock2/Inquisit_design_files/testing-Design-Matrix-with-Erasures-',as.character(df$iteration[i]),'.csv'))
@@ -83,7 +96,6 @@ sd_val <- 2 # standard deviation of reward / range of rewards
 centers <- sample(seq(0, 2*pi, by = pi/20), ncenters, replace = FALSE) # line up gaussians here
 values <- sample(truncnorm::rtruncnorm(ncenters, a = 0, mean = mean_val, sd = sd_val))
 width_sd <- 0.349 # fixed, how wide are the underlying Gaussians
-sanity_checks = F # diagnostic plots inside simulation loop
 ntrials = 300
 
 # set up contingency
@@ -101,3 +113,9 @@ setwd('/Users/andypapale/clock2/Inquisit_design_files/')
 write.csv(inq_tri,paste0('testing-Design-Matrix-',as.character(df$iteration[i]),'.csv'))
 
 d9 <- read_csv(paste0('/Users/andypapale/clock2/Inquisit_design_files/testing-Design-Matrix-',as.character(df$iteration[i]),'.csv'))
+
+x <- c(1,16,31);
+y <- c(val_min[iT],era_val[iT],val_max[iT]);
+
+v_new <- zoo::na.spline(v_new)
+
