@@ -27,7 +27,7 @@ bump_center <- (pi / 180) * bump_center
 contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians")
 ttd <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=5)
 ttd$apply_flex(high_avg = 1, high_spread = 0, low_avg = 10, spread_max = 150, jump_high = T)
-ttd$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
+# ttd$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
 # plot(ttd$get_starting_values())
 # plot(ttd$spread)
 
@@ -80,7 +80,11 @@ generate_scepticc_data <- function(n=25, contingency = NULL) {
 }
 
 nsubj <- 25
-ff <- generate_scepticc_data(n = nsubj, contingency = ttd)
+ff_noerasure <- generate_scepticc_data(n = nsubj, contingency = ttd)
+
+pars <- ff %>%
+  group_by(id) %>%
+  summarise_all(mean)
 
 outcomes <- ff %>%
   select(id, trial, outcome) %>%
@@ -123,8 +127,8 @@ rc <- choices_to_pbins(choices)
 
 # setup inputs to Stan
 data_list <- list(
-  B = 12, # 12 basis functions
-  P = 120, # 120 evaluation points for value
+  B = 16, # 12 basis functions
+  P = 60, # 120 evaluation points for value
   N = nsubj,
   T = 300,
   Tsubj = rep(300, nsubj),
@@ -146,7 +150,7 @@ adapt_delta <- 0.95
 stepsize <- 1
 max_treedepth <- 10
 
-stanmodel_arg <- file.path(repo_dir, "code", "scepticc.stan")
+stanmodel_arg <- file.path(repo_dir, "code", "scepticc_noepsilon.stan")
 sm <- rstan::stan_model(stanmodel_arg) # compile model
 
 # MCMC
@@ -161,6 +165,16 @@ fit <- rstan::sampling(object  = sm,
                         control = list(adapt_delta   = adapt_delta,
                                       stepsize      = stepsize,
                                       max_treedepth = max_treedepth))                             
+
+
+#saveRDS(fit, file="scepticc_n25_t300_26Mar2024.rds")
+cor(pars$alphas, colMeans(ee$alpha))
+plot(pars$alphas, colMeans(ee$alpha))
+cor(pars$betas, colMeans(ee$beta))
+cor(pars$gammas, colMeans(ee$gamma))
+plot(pars$gammas, colMeans(ee$gamma))
+
+ee <- extract(fit)
 
 
 parVals <- rstan::extract(fit, permuted = TRUE)

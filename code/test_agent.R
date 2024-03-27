@@ -93,12 +93,15 @@ if (animated_plot) {
   
   for (ii in 1:nrow(aa)) {
     if (tt$erasure_segments$trial_type[ii] == "erasure") {
-      ss <- paste(", er:", round(tt$erasure_segments[ii,"segment_min"], 2))
+      ss <- paste(", er:", round(tt$erasure_segments[ii, "segment_min"], 2))
+      vpos <- mean(unlist(tt$erasure_segments[ii, c("segment_min", "segment_max")]))
     } else {
       ss <- ""
+      vpos <- NULL
     }
     plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii], ss), ylim = range(aa), xaxt='n')
     axis(side = 1, at = seq(1, 360, by=30), labels= loc[seq(1, 360, by=30)])
+    if (!is.null(vpos)) abline(v = vpos)
     Sys.sleep(.2)
     
   }

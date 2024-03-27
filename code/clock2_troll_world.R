@@ -198,7 +198,7 @@ troll_world <- R6::R6Class(
       
       private$pvt_choices <- data.frame(
         trial = 1:private$pvt_n_trials,
-        trial_type = NA_character_,
+        trial_type = "no erasure",
         choice_rad = NA_real_,
         outcome = NA_real_,
         in_segment = NA,
@@ -209,7 +209,7 @@ troll_world <- R6::R6Class(
       
       self$erasure_segments <- data.frame(
         trial = 1:private$pvt_n_trials,
-        trial_type = NA_character_,
+        trial_type = "no erasure",
         segment_shown = NA,
         segment_min = NA_real_,
         segment_max = NA_real_,

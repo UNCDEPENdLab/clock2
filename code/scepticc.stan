@@ -229,11 +229,12 @@ model {
     for (t in 1:Tsubj[i]) {
       // compute evaluated value function
       V = to_vector(to_row_vector(w) * Phi); // w is B and Phi is B x P -> 1 x P
+      V = V - max(V); // subtract max to make categorical_logit easier
       // V = rep_vector(0.0, P); // debug with a forced value vector of 0
       // print("V: ", V);
 
       // predicted softmax choice -- multinomial
-      choices[i,t] ~ categorical_logit(beta[i] * V);
+      choices[i,t] ~ categorical_logit(V / beta[i]);
 
       // look up eligibility for each basis using the position of the choice
       e = to_vector(EB[choices[i,t],]);
