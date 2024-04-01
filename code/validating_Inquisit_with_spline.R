@@ -18,7 +18,7 @@ if (grepl("Nidhi", getwd())){
   output_dir <- 'C:/Users/Nidhi/OneDrive - University of North Carolina at Chapel Hill/Documents/GitHub/clock2/Inquisit_design_files'
   source(file.path(thispath, "von_mises_basis.R"))
   source(file.path(thispath, "clock2_troll_world.R"))
-  source(file.path(thispath, "scepticc.R"))
+  source(file.path(thispath, "scepticc_Nov_2023_commit.R"))
 } else {
   output_dir <- '/Users/andypapale/clock2/Inquisit_design_files/'
   source('~/clock2/code/clock2_sim_crc_aep.R')
@@ -43,7 +43,7 @@ contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights 
 tt <- troll_world$new(n_trials=ntrials, values=contingency$get_wfunc(), drift_sd=1)
 tt$apply_flex(high_avg = 1, high_spread = 0, low_avg = df$low_avg[i], spread_max = 100, jump_high = T)
 tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 2, block_length = df$block_length[i])
-sceptic_agent <- scepticc$new(n_basis=12, n_points=200, contingency=tt)
+sceptic_agent <- scepticc_Nov_2023_commit$new(n_basis=12, n_points=200, contingency=tt)
 sceptic_agent$alpha <- alpha <- df$alpha[i]
 sceptic_agent$beta <- beta <- df$beta[i]
 sceptic_agent$gamma <- gamma <- df$gamma[i]
