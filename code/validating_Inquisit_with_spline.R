@@ -75,7 +75,7 @@ era_val <- NULL;
 val_min <- NULL;
 val_max <- NULL;
 for (iT in 1:300){
-  if (!is.na(seg_max[iT]) && tt$erasure_segments$trial_type=="erasure"){
+  if (!is.na(seg_max[iT]) && tt$erasure_segments$trial_type[iT]=="erasure"){
     if (seg_max[iT] < 31){
       # then era_loc >= 360
       if (seg_max[iT] < 16){
