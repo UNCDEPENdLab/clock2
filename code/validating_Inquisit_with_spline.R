@@ -22,6 +22,9 @@ if (grepl("Nidhi", getwd())){
 } else {
   output_dir <- '/Users/andypapale/clock2/Inquisit_design_files/'
   source('~/clock2/code/clock2_sim_crc_aep.R')
+  source("~/clock2/code/von_mises_basis.R")
+  source("~/clock2/code/clock2_troll_world.R")
+  source("~/clock2/code/scepticc_Nov_2023_commit.R")
 }
 setwd(output_dir)
 i = 1
@@ -187,7 +190,11 @@ for (t in 1:300){
 ############################################
 
 # Pull in Inquisit output files
-df_inq <- read_csv("C:/Users/Nidhi/OneDrive - University of North Carolina at Chapel Hill/Documents/GitHub/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-23-21-25-55-768.csv")
+if (grepl("Nidhi", getwd())){
+  df_inq <- read_csv("C:/Users/Nidhi/OneDrive - University of North Carolina at Chapel Hill/Documents/GitHub/Clock_v2/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-23-21-25-55-768.csv")
+} else {
+  df_inq <- read_csv('/Users/andypapale/Desktop/2024-01-Testing/data/clock_2_1_1_seed_152_testing_raw_1_2024-01-24-18-03-24-721.csv')
+}
 df_inq <- df_inq %>% filter(trialcode=="getValueVector")
 ppt <- read_pptx()  # Create a new PowerPoint document
 for (t in 1:300){
