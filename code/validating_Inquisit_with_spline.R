@@ -75,7 +75,7 @@ era_val <- NULL;
 val_min <- NULL;
 val_max <- NULL;
 for (iT in 1:300){
-  if (!is.na(seg_max[iT])){
+  if (!is.na(seg_max[iT]) && tt$erasure_segments$trial_type=="erasure"){
     if (seg_max[iT] < 31){
       # then era_loc >= 360
       if (seg_max[iT] < 16){
@@ -102,11 +102,7 @@ for (iT in 1:300){
     val_max[iT] <- NA;
   }
 }
-if (grepl("Nidhi", getwd())){
-  d9_w_era <- read_csv(paste0(output_dir, '/testing-Design-Matrix-with-Erasures-',as.character(df$iteration[i]),'.csv'))
-} else {
-  d9_w_era <- read_csv(paste0('/Users/andypapale/clock2/Inquisit_design_files/testing-Design-Matrix-with-Erasures-',as.character(df$iteration[i]),'.csv'))
-}
+
 
 ## get values without erasures
 set.seed(df$iteration[i])
