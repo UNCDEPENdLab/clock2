@@ -9,6 +9,7 @@ if (sum(stringr::str_detect(Sys.info(), "Alex|alexdombrovski"))>1) {
 source("code/von_mises_basis.R")
 source("code/clock2_troll_world.R")
 source("code/scepticc.R")
+source("code/plot_troll_world.R")
 ncenters <- 9 # how many gaussians there are
 mean_val <- 10 # mean reward rate
 sd_val <- 2 # standard deviation of reward / range of rewards
@@ -49,13 +50,45 @@ contingency$get_weights()
 # tt$setup_erasure_blocks()
 # plot(tt$spread) # prominence of bump vs floor over trials, shows switches, bump drifts in Gaussian random walk
 
+
+set.seed(1010)
+
 # stable 100-trial contingency for model validation
-tt <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=1)
-tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 100, jump_high = FALSE)
+tt <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=15)
+tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 50, jump_high = FALSE)
 tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
 
+vmat_erased <- tt$get_values_matrix("drift")[300, ]
+vmat_orig <- tt$get_original_tvals()[300,]
 
-plot_troll_world(tt, frame_rate = 3)
+plot(vmat_erased, type="l")
+lines(vmat_orig, type = "l", col = "blue")
+
+# tt$erasure_segments %>% filter(trial_type=="erasure") %>% group_by(segment_min) %>% filter(row_number() == 1)
+
+#plot_troll_world(tt, frame_rate = 3, ncores = 8, out_mp4 = "trolls_sd15_seed1010.mp4")
+plot_troll_world(tt, frame_rate = 3, ncores=8, out_mp4="trolls_sd15_seed1010_orig_rad.mp4")
+
+
+
+set.seed(1010)
+
+# stable 100-trial contingency for model validation
+tt_nodrift <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=0)
+tt_nodrift$apply_flex(high_avg = 1, high_spread = 0, spread_max = 50, jump_high = FALSE)
+tt_nodrift$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
+
+vmat_erased <- tt_nodrift$get_values_matrix("drift")[81, ]
+vmat_orig <- tt_nodrift$get_original_tvals()[300,]
+
+plot(vmat_erased, type="l")
+lines(vmat_orig, type = "l", col = "blue")
+
+
+
+
+
+plot_troll_world(tt, frame_rate = 3, ncores=8)
 
 
 

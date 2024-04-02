@@ -209,17 +209,14 @@ troll_world <- R6::R6Class(
         segment_min = NA_real_,
         segment_max = NA_real_
       )
-      
+
       self$erasure_segments <- data.frame(
-        trial = 1:private$pvt_n_trials,
-        trial_type = "no erasure",
-        segment_shown = NA,
-        segment_min = NA_real_,
-        segment_max = NA_real_,
-        v_old = NA_real_,
-        v_new = NA_real_,
-        clicks_remain = NA_integer_,
-        timeouts_remain = NA_integer_
+        trial = 1:private$pvt_n_trials, trial_type = "no erasure", segment_shown = NA, 
+        segment_min = NA_real_, segment_max = NA_real_, segment_mid = NA_real_,
+        segment_min_pos = NA_integer_, segment_max_pos = NA_integer_, segment_mid_pos = NA_integer_,
+        segment_min_shift = NA_integer_, segment_max_shift = NA_integer_, segment_mid_shift = NA_integer_,
+        segment_mid_pos_shift = NA_integer_,
+        v_old = NA_real_, v_new = NA_real_, clicks_remain = NA_integer_, timeouts_remain = NA_integer_
       )
     },
     
@@ -227,13 +224,14 @@ troll_world <- R6::R6Class(
     erase_segment = function(erase = TRUE, trial=NULL) {
       # default to current trial if not specified
       if (is.null(trial)) trial <- self$cur_trial
+
+      checkmate::assert_integerish(trial, len=1L)
       
       # get untainted value vector for this trial -- other manipulations (e.g., flex) will be added later
       v <- self$get_values_matrix(type = "original")[trial,]
       loc <- private$pvt_pvec # positions of each timestep around circle
       
-      stopifnot(length(v) == length(loc))
-      
+      stopifnot(length(v) == length(loc))      
       
       # Examine which positions are eligible for erasure based on their quantiles in the value vector
       qs <- quantile(v, self$erasure_elig_pos_qs)
@@ -243,12 +241,21 @@ troll_world <- R6::R6Class(
       mid_pos <- sample(pp, 1) # vector index of midpoint
       mid_rad <- loc[mid_pos]  # position of midpoint in radians
       
+      loc_shift <- private$shift_vec(loc, private$pvt_drift_vec[trial]) # positions at current drift
+      mid_rad_shift <- loc_shift[mid_pos] # in radians
+
+      pos_shift <- private$shift_vec(seq_along(v), private$pvt_drift_vec[trial])
+      mid_pos_shift <- pos_shift[mid_pos] # in vector position
+
       # Find the extent of the segment by going CCW and CW by width/2
       low_rad <- (mid_rad - self$erasure_width/2) %% (2*pi) # location of start point in radians based on location
       high_rad <- (mid_rad + self$erasure_width/2) %% (2*pi) # wrap back onto circle by modulus
       low_pos <- which.min(abs(loc - low_rad)) # vector index of starting point
       high_pos <- which.min(abs(loc - high_rad)) # vector index of ending point
-      
+
+      low_rad_shift <- loc_shift[low_pos]
+      high_rad_shift <- loc_shift[high_pos]
+
       if (isTRUE(erase)) {
         # handle scenario where we wrap around 0/2*pi boundary
         if (low_pos > high_pos) {
@@ -299,14 +306,18 @@ troll_world <- R6::R6Class(
       
       # show segment -- populate design file
       block_end <- private$get_block_end(trial)
-      
-      self$erasure_segments$segment_shown[trial:block_end] <- TRUE
-      self$erasure_segments$segment_min[trial:block_end] <- low_rad
-      self$erasure_segments$segment_max[trial:block_end] <- high_rad
-      self$erasure_segments$clicks_remain[trial:block_end] <- self$disappear_clicks
-      self$erasure_segments$timeouts_remain[trial:block_end] <- self$timeout_trials
-      self$erasure_segments$v_old[trial:block_end] <- v[mid_pos]
-      self$erasure_segments$v_new[trial:block_end] <- v_new[mid_pos]
+
+      # data.frame for tracking segment details
+      this_seg <- data.frame(
+        segment_shown = TRUE, segment_min = low_rad, segment_max = high_rad, segment_mid = mid_rad,
+        segment_min_pos = low_pos, segment_max_pos = high_pos, segment_mid_pos = mid_pos,
+        segment_min_shift = low_rad_shift, segment_max_shift = high_rad_shift, segment_mid_shift = mid_rad_shift,
+        segment_mid_pos_shift = mid_pos_shift,
+        clicks_remain = self$disappear_clicks, timeouts_remain = self$timeout_trials, v_old = v[mid_pos], v_new = v_new[mid_pos]
+      )
+
+      # populate these values from here to the end of the block
+      self$erasure_segments[trial:block_end, names(this_seg)] <- this_seg
       
       return(invisible(NULL))
     },
@@ -577,6 +588,9 @@ troll_world <- R6::R6Class(
     },
     get_drift_vec = function() {
       private$pvt_drift_vec
+    },
+    get_original_tvals = function() {
+      private$pvt_original_tvals
     }
   )
 )
