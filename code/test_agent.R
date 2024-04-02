@@ -36,7 +36,7 @@ contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights 
 # vv <- a$get_tvec()
 
 # contingency <- rbf_set$new(elements = gg)
-plot(contingency$get_wfunc())
+#plot(contingency$get_wfunc(), type="l")
 
 contingency$get_centers()
 contingency$get_weights()
@@ -53,6 +53,47 @@ contingency$get_weights()
 tt <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=1)
 tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 100, jump_high = FALSE)
 tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
+
+
+plot_troll_world(tt, frame_rate = 3)
+
+
+
+
+###########
+
+library(gganimate)
+vv <- tt$get_values_matrix()
+vdf <- reshape2::melt(vv, varnames = c("trial", "point"))
+ee <- tt$erasure_segments
+pos_df <- data.frame(pos_rad = tt$get_pvec(), point = seq_along(tt$get_pvec()))
+vdf <- vdf %>% left_join(ee, by=) %>% left_join(pos_df)
+
+gg <- ggplot(vdf %>% filter(trial == 1), aes(x = pos_rad, y = value)) +
+  geom_line() +
+  # transition_states(trial) +
+  ggtitle("Trial: {closest_state}", subtitle = "condition: {trial_type}") + # "Frame {frame} of {nframes}")
+  geom_rect(
+    data=vdf[1,],
+    mapping = aes(xmin = segment_min, xmax = segment_max, ymin = 0, ymax = value),
+    fill = "orange", color = "transparent", alpha = 0.2
+  )
+
+ggsave("tmp.pdf", gg)
+
+gg <- ggplot(vdf, aes(x = pos_rad, y = value)) +
+  geom_line() +
+  transition_states(trial) +
+  ggtitle("Trial: {closest_state}", subtitle = "condition: {trial_type}") + # "Frame {frame} of {nframes}")
+  geom_rect(
+    data=vdf[1,],
+    mapping = aes(xmin = segment_min, xmax = segment_max, ymin = 0, ymax = value),
+    fill = "orange", color = "transparent", alpha = 0.2
+  )
+
+aa <- animate(gg, renderer=gifski_renderer())
+frame_vars(aa)
+anim_save(gg, filename="test.mp4")
 sceptic_agent <- scepticc$new(n_basis=12, n_points=360, contingency=tt, beta = 40, epsilon_u = .1)
 df <- sceptic_agent$run_contingency()
 tt$get_choices()
