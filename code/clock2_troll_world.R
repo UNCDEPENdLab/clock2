@@ -591,6 +591,9 @@ troll_world <- R6::R6Class(
     },
     get_original_tvals = function() {
       private$pvt_original_tvals
+    },
+    sv = function(v, s) {
+      private$shift_vec(v, s)
     }
   )
 )
