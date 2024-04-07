@@ -26,8 +26,8 @@ bump_center <- (pi / 180) * bump_center
 # 
 contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights = c(values, bump_value), widths = rep(width_sd, ncenters + 1), units = "radians")
 ttd <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=5)
-ttd$apply_flex(high_avg = 1, high_spread = 0, low_avg = 10, spread_max = 150, jump_high = T)
-# ttd$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
+ttd$apply_flex(high_avg = 1, high_spread = 0, low_avg = 10, spread_max = 150, jump_high = FALSE)
+ttd$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
 # plot(ttd$get_starting_values())
 # plot(ttd$spread)
 
@@ -80,7 +80,8 @@ generate_scepticc_data <- function(n=25, contingency = NULL) {
 }
 
 nsubj <- 25
-ff_noerasure <- generate_scepticc_data(n = nsubj, contingency = ttd)
+#ff_noerasure <- generate_scepticc_data(n = nsubj, contingency = ttd)
+ff <- generate_scepticc_data(n = nsubj, contingency = ttd)
 
 pars <- ff %>%
   group_by(id) %>%
@@ -112,6 +113,20 @@ segment_shown <- ff %>%
   as.matrix() %>%
   apply(c(1,2), function(x) if (is.na(x)) 0 else x) # replace NA with 0
 
+segment_min <- ff %>%
+  select(id, trial, segment_min) %>%
+  pivot_wider(id_cols = "id", names_from = "trial", values_from = "segment_min") %>%
+  select(-id) %>%
+  as.matrix() %>%
+  apply(c(1,2), function(x) if (is.na(x)) -99 else x) # replace NA with -99
+
+segment_max <- ff %>%
+  select(id, trial, segment_max) %>%
+  pivot_wider(id_cols = "id", names_from = "trial", values_from = "segment_max") %>%
+  select(-id) %>%
+  as.matrix() %>%
+  apply(c(1,2), function(x) if (is.na(x)) -99 else x) # replace NA with -99
+
 
 # round choices in radians onto positions vector/points -- superseded by internal bincode function in stan
 choices_to_pbins <- function(choices, bins=120) {
@@ -128,7 +143,7 @@ rc <- choices_to_pbins(choices)
 # setup inputs to Stan
 data_list <- list(
   B = 16, # 12 basis functions
-  P = 60, # 120 evaluation points for value
+  P = 90, # 90 evaluation points for value
   N = nsubj,
   T = 300,
   Tsubj = rep(300, nsubj),
@@ -137,20 +152,24 @@ data_list <- list(
   outcomes = outcomes,
   choices_rad = choices,
   trial_types = trial_types,
-  segment_shown = segment_shown
+  segment_shown = segment_shown,
+  segment_min = segment_min,
+  segment_max = segment_max
 )
 
-options(mc.cores = ncore)
+
 niter  <- 600
 nwarmup <- 100
-nchain <- 2
+nchain <- 4
 ncore <- 4
 nthin <- 1
 adapt_delta <- 0.95
 stepsize <- 1
 max_treedepth <- 10
+options(mc.cores = ncore)
 
-stanmodel_arg <- file.path(repo_dir, "code", "scepticc_noepsilon.stan")
+#stanmodel_arg <- file.path(repo_dir, "code", "scepticc_noepsilon.stan")
+stanmodel_arg <- file.path(repo_dir, "code", "scepticc.stan")
 sm <- rstan::stan_model(stanmodel_arg) # compile model
 
 # MCMC
@@ -189,6 +208,25 @@ fit_debug <- rstan::sampling(
     max_treedepth = max_treedepth
   )
 )
+
+ee <- extract(fit_debug)
+
+# test position of positions
+abs(2 * pi - (ee$p_pvec[1, 60] + ee$p_pvec[1, 1])) < 1e-5
+abs(2 * pi - (ee$p_pvec[1, 60] + ee$p_pvec[1, 1])) < 1e-5
+all.equal(diff(ee$p_breaks[1, ]))
+
+data_list$segment_min[1, 1]
+data_list$segment_max[1, 1]
+ee$p_S[1, 1, 1, ]
+ee$p_breaks[1, ]
+
+fit_vb <- rstan::vb(
+  object = sm,
+  data = data_list
+)
+
+
 
 # examine basis
 basis <- extract(fit_debug)$p_Phi[1, , ]

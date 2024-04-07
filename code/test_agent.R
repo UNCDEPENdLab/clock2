@@ -56,7 +56,7 @@ set.seed(1010)
 # stable 100-trial contingency for model validation
 tt <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=15)
 tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 50, jump_high = FALSE)
-tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
+#tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
 
 vmat_erased <- tt$get_values_matrix("drift")[300, ]
 vmat_orig <- tt$get_original_tvals()[300,]
@@ -69,6 +69,29 @@ lines(vmat_orig, type = "l", col = "blue")
 #plot_troll_world(tt, frame_rate = 3, ncores = 8, out_mp4 = "trolls_sd15_seed1010.mp4")
 plot_troll_world(tt, frame_rate = 3, ncores=8, out_mp4="trolls_sd15_seed1010_orig_rad.mp4")
 
+
+
+# reversibility of drift
+dvals <- tt$get_values_matrix("drift")
+dvec <- tt$get_drift_vec()
+dvals_reverse <- t(sapply(seq_len(nrow(dvals)), function(i) {
+  tt$sv(dvals[i, ], -1 * dvec[i])
+}))
+ovals <- tt$get_original_tvals()
+summary(dvals_reverse - ovals)
+identical(dvals_reverse, ovals) # that's good :)
+rowSums(ovals)
+rowSums(dvals_reverse)
+rowSums(dvals)
+plot(ovals[1, ])
+plot(dvals[1, ])
+plot(dvals_reverse[200, ])
+
+
+
+private$pvt_drift_tvals <- t(sapply(seq_len(private$pvt_n_trials), function(i) {
+          private$shift_vec(self$tvals[i, ], dv[i])
+        }))
 
 
 set.seed(1010)

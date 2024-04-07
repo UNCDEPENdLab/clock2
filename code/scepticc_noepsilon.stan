@@ -85,7 +85,6 @@ functions {
     
     return(pdf);
   }
-
 }
 
 // basis is B functions x P points
@@ -104,19 +103,7 @@ data {
   real choices_rad[N,T];  // choices matrix in radians
   int trial_types[N,T];   // trial types: 1=no erasure, 2=erasure, 3=attention
   int<lower=0,upper=1> segment_shown[N,T]; // whether the segment is shown: 0=no, 1=yes
-  real segment_min[N,T];  // segment minimum in radians
-  real segment_max[N,T];  // segment maximum in radians
 }
-
-/* 
-for epsilon_u and epsilon_int, we need
-a) a 0/1 indicator function S of the same size as V (P points) for each trial, where 1 indicates the erased or attentional segment
-b) parameter epsilon for general segment preference
-c) parameter omega for erasure preference relative to attention
-d) a mixing choice rule choices[i,t] ~ categorical_logit(V / beta[i] + (epsilon + omega) * S);
-
-To calculate S, we need the segment_min and segment_max locations and to bin them identically to choices
-*/
 
 transformed data {
   // initialize basis weights at 0
@@ -173,46 +160,6 @@ transformed data {
         EB[p,b] = compute_overlap(tmp_g, to_vector(Phi[b,]));
       }
   }
-
-  // precalculate segment indicator matrix
-  // simplest approach to avoid lots of type conversion complaints is to create a 2D array with P-length vectors, rather than a 3-D array
-  array[N,T] vector[P] S; // subjects x trials array where each element is a P-length vector
-  
-  int min_pos[N,T]; // segment minimum in bins
-  int max_pos[N,T]; // segment maximum in bins
-
-  // convert segment positions into bins, mirroring choice bins
-  for (i in 1:N) {
-    //if (segment_min[i,] < 0.0) segment_min[i,] = nan();
-    //if (segment_max[i,] < 0.0) segment_max[i,] = nan();
-    min_pos[i,] = bincode(to_vector(segment_min[i,]), breaks, 1, 1);
-    max_pos[i,] = bincode(to_vector(segment_max[i,]), breaks, 1, 1);
-  }
-
-  // now populate 0/1 vectors for each trial based on bins
-  vector[P] svec; // P-length indicator vector
-  int l;
-  int m;
-  for (i in 1:N) {
-    for (t in 1:Tsubj[i]) {
-      svec = rep_vector(0.0, P);
-      
-      // negative values in segment min denote non-segment (no erasure) trials
-      if (segment_min[i,t] > 0.0) {
-        l = min_pos[i,t];
-        m = max_pos[i,t];
-        if (m < l) {
-          // handle wrapping at 0
-          svec[l:num_elements(svec)] = rep_vector(1.0, num_elements(svec) - l + 1);
-          svec[1:m] = rep_vector(1.0, m);
-        } else {
-          svec[l:m] = rep_vector(1.0, m - l + 1);
-        }
-      }
-      
-      S[i,t] = svec;
-    }
-  }
 }
 
 parameters {
@@ -220,38 +167,24 @@ parameters {
   // 1 = alpha
   // 2 = beta
   // 3 = gamma
-  // 4 = epsilon_u
-  // 5 = epislon_a
-  vector[5] mu_pr; 
-  vector<lower=0>[5] sigma;
+  vector[3] mu_pr; 
+  vector<lower=0>[3] sigma;
 
   vector[N] alpha_pr;     // learning rate
   vector[N] beta_pr;      // temperature
   vector[N] gamma_pr;     // decay
-  vector[N] epsilon_u_pr; // uncertainty selection preference
-  vector[N] epsilon_int_pr; // overall (intercept) segment selection preference
 }
 
 transformed parameters {
   vector<lower=0, upper=1>[N] alpha;
   vector<lower=0>[N] beta;
   vector<lower=0, upper=1>[N] gamma;
-  // vector<lower=0, upper=1>[N] epsilon_u;
-  // vector<lower=0, upper=1>[N] epsilon_int;
-  vector[N] epsilon_u;
-  vector[N] epsilon_int;
 
   // sigmoid transform for gamma and alpha
   // info on transformation here: https://mc-stan.org/docs/2_18/stan-users-guide/reparameterization-section.html
   for (i in 1:N) {
     alpha[i] = Phi_approx(mu_pr[1] + sigma[1] * alpha_pr[i]);
     gamma[i] = Phi_approx(mu_pr[3] + sigma[3] * gamma_pr[i]);
-    // epsilon_u[i] = Phi_approx(mu_pr[4] + sigma[4] * epsilon_u_pr[i]);
-    // epsilon_int[i] = Phi_approx(mu_pr[5] + sigma[5] * epsilon_int_pr[i]);
-
-    // switch to continuous normal case (allowing negatives)
-    epsilon_u[i] = mu_pr[4] + sigma[4] * epsilon_u_pr[i];
-    epsilon_int[i] = mu_pr[5] + sigma[5] * epsilon_int_pr[i];
   }
 
   // exponential transform on temperature
@@ -260,53 +193,37 @@ transformed parameters {
 
 model {
   // hyperparameters
-  mu_pr[1:5] ~ std_normal(); // currently all ~N(0,1) on hyperparameters
-  sigma[1:5] ~ normal(0, 0.2); // individual variances in hyperparameters
+  mu_pr[1:3] ~ std_normal(); // currently all ~N(0,1) on hyperparameters
+  sigma[1:3] ~ normal(0, 0.2); // individual variances in hyperparameters
 
   // untransformed individual parameters
   alpha_pr ~ std_normal();
   beta_pr ~ std_normal();
   gamma_pr ~ std_normal();
-  epsilon_u_pr ~ std_normal();
-  epsilon_int_pr ~ std_normal();
 
   // loop over subjects and trials
   for (i in 1:N) {
     vector[P] V;  // value vector
-    vector[P] st;  // segment vector on this trial
     vector[B] e;  // eligibility vector (for each basis)
     vector[B] w;  // weights vector
     vector[B] pe; // basis-wise PEs
     vector[B] decay; // basis-wise decay
     vector[P] g; // generalization function
-    real mV;    // mean value
-    real epsilon_t; // current trial epsilon (based on trial type and whether segment is highlighted)
 
     w = initW;
     
     //print("beta: ", beta[i]);
     //print("V: ", V);
 
-    for (t in 1:Tsubj[i]) { // trial types: 1=no erasure, 2=erasure, 3=attention
-      if (trial_types[i,t] == 1) {
-        epsilon_t = 0.0;
-      } else if (trial_types[i,t] == 2) {
-        epsilon_t = epsilon_int[i] + epsilon_u[i];
-      } else if (trial_types[i,t] == 3) {
-        epsilon_t = epsilon_int[i];
-      }
-
+    for (t in 1:Tsubj[i]) {
       // compute evaluated value function
       V = to_vector(to_row_vector(w) * Phi); // w is B and Phi is B x P -> 1 x P
-      mV = mean(V);
-      st = S[i,t] .* mV;
       V = V - max(V); // subtract max to make categorical_logit easier
-      
       // V = rep_vector(0.0, P); // debug with a forced value vector of 0
       // print("V: ", V);
 
       // predicted softmax choice -- multinomial
-      choices[i,t] ~ categorical_logit(V / beta[i] + epsilon_t .* st);
+      choices[i,t] ~ categorical_logit(V / beta[i]);
 
       // look up eligibility for each basis using the position of the choice
       e = to_vector(EB[choices[i,t],]);
@@ -327,7 +244,7 @@ model {
 generated quantities {
 
   // placing code within a local section using curly braces removes these objects from the output
-  
+  /*
   // debug basis setup
   vector[P] p_pvec; // positions vector
   p_pvec = pvec;
@@ -344,20 +261,8 @@ generated quantities {
   p_choices = choices;
   vector[P+1] p_breaks; // breaks for cutting observed choices (in radians) to P bins
   p_breaks = breaks;
-
-  // array[N,T] vector[P] p_S; // subjects x trials x points
-  /*
-  array[5,T] vector[P] p_S; // subjects x trials x points
-  for (i in 1:5) {
-    for (j in 1:T) {
-      //print("S[i,j]: ", S[i,j]);
-      p_S[i,j] = S[i,j];
-    }
-  }
   */
 
-  // p_S = S; // subjects x trials x points
-  
   // run sceptic model loop to obtain predictions for auditing (in progress)
   /*
   {
