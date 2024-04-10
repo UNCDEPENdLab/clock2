@@ -48,12 +48,21 @@ scepticc <- R6::R6Class(
         checkmate::assert_number(v, lower=0, upper=1)
         private$pvt_epsilon_u <- v
       }
+    },
+    epsilon_a = function(v) {
+      if (missing(v)) {
+        return(private$pvt_epsilon_a)
+      } else {
+        checkmate::assert_number(v, lower=0, upper=1)
+        private$pvt_epsilon_a <- v
+      }
     }
     
   ),
   public = list(
     initialize = function(n_basis = 12, n_points = NULL, basis_sd = 0.3, weights_0 = 0, elig_sd = 0.3, 
-                          alpha=NULL, gamma=NULL, beta=NULL, epsilon_u = NULL, contingency=NULL, data = NULL, seed=NULL) {
+                          alpha=NULL, gamma=NULL, beta=NULL, epsilon_u = NULL, epsilon_a = NULL,
+                          contingency=NULL, data = NULL, seed=NULL) {
       checkmate::assert_number(n_basis, lower=2)
       if (checkmate::test_number(weights_0)) weights_0 <- rep(weights_0, n_basis)
       if (checkmate::test_number(basis_sd)) basis_sd <- rep(basis_sd, n_basis)
@@ -81,6 +90,7 @@ scepticc <- R6::R6Class(
       if (!is.null(beta)) self$beta <- beta
       if (!is.null(gamma)) self$gamma <- gamma
       if (!is.null(epsilon_u)) self$epsilon_u <- epsilon_u
+      if (!is.null(epsilon_a)) self$epsilon_a <- epsilon_a
       
       checkmate::assert_false(!is.null(contingency) & !is.null(data))
       if (!is.null(contingency)) {
@@ -172,11 +182,30 @@ scepticc <- R6::R6Class(
       # print(private$pvt_bf_set$get_wfunc())
       # lookup choice against positions in radians
       seg <- private$pvt_contingency$get_cur_segment()
-      if (seg$trial_type=="erasure" & runif(1, 0, 1) < private$pvt_epsilon_u) {
-        # simply sample the middle half of the erased segment; 
-        return(seg$segment_min + runif(1, pi/24, pi/9))} else {
-          s <- sample(seq_len(private$pvt_n_points), 1, prob = self$get_choice_probs())
-          return(private$pvt_eligibility$get_pvec()[s])}
+
+      # handle wraparound at 0
+      if (seg$trial_type != "no erasure") {
+        if (seg$segment_min > seg$segment_max) {
+          l <- seg$segment_min
+          u <- 2 * pi + seg$segment_max
+          w <- runif(1, l + 1e-3, u - 1e-3)
+          w <- if (w > 2 * pi) w - 2 * pi else w
+        } else {
+          w <- runif(1, seg$segment_min + 1e-3, seg$segment_max - 1e-3)
+        }
+      } 
+    
+      if (seg$trial_type == "erasure" && runif(1, 0, 1) < private$pvt_epsilon_u) {
+        # sample randomly within the erased segment
+        return(w)
+      } else if (seg$trial_type == "attention" && runif(1, 0, 1) < private$pvt_epsilon_a) {
+        # sample randomly within the erased segment
+        return(w)
+      } else {
+        # sample according to value
+        s <- sample(seq_len(private$pvt_n_points), 1, prob = self$get_choice_probs())
+        return(private$pvt_eligibility$get_pvec()[s])
+      }
     },
     run_contingency = function(pvec=NULL, optimize=FALSE) {
       if (is.null(private$pvt_contingency)) {

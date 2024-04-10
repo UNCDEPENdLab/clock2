@@ -9,6 +9,7 @@ if (sum(stringr::str_detect(Sys.info(), "Alex|alexdombrovski"))>1) {
 source("code/von_mises_basis.R")
 source("code/clock2_troll_world.R")
 source("code/scepticc.R")
+source("code/plot_troll_world.R")
 ncenters <- 9 # how many gaussians there are
 mean_val <- 10 # mean reward rate
 sd_val <- 2 # standard deviation of reward / range of rewards
@@ -36,7 +37,7 @@ contingency <- vm_circle_contingency(centers = c(centers, bump_center), weights 
 # vv <- a$get_tvec()
 
 # contingency <- rbf_set$new(elements = gg)
-plot(contingency$get_wfunc())
+#plot(contingency$get_wfunc(), type="l")
 
 contingency$get_centers()
 contingency$get_weights()
@@ -49,10 +50,106 @@ contingency$get_weights()
 # tt$setup_erasure_blocks()
 # plot(tt$spread) # prominence of bump vs floor over trials, shows switches, bump drifts in Gaussian random walk
 
+
+set.seed(1010)
+
 # stable 100-trial contingency for model validation
-tt <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=1)
-tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 100, jump_high = FALSE)
-tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
+tt <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=15)
+tt$apply_flex(high_avg = 1, high_spread = 0, spread_max = 50, jump_high = FALSE)
+#tt$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
+
+vmat_erased <- tt$get_values_matrix("drift")[300, ]
+vmat_orig <- tt$get_original_tvals()[300,]
+
+plot(vmat_erased, type="l")
+lines(vmat_orig, type = "l", col = "blue")
+
+# tt$erasure_segments %>% filter(trial_type=="erasure") %>% group_by(segment_min) %>% filter(row_number() == 1)
+
+#plot_troll_world(tt, frame_rate = 3, ncores = 8, out_mp4 = "trolls_sd15_seed1010.mp4")
+plot_troll_world(tt, frame_rate = 3, ncores=8, out_mp4="trolls_sd15_seed1010_orig_rad.mp4")
+
+
+
+# reversibility of drift
+dvals <- tt$get_values_matrix("drift")
+dvec <- tt$get_drift_vec()
+dvals_reverse <- t(sapply(seq_len(nrow(dvals)), function(i) {
+  tt$sv(dvals[i, ], -1 * dvec[i])
+}))
+ovals <- tt$get_original_tvals()
+summary(dvals_reverse - ovals)
+identical(dvals_reverse, ovals) # that's good :)
+rowSums(ovals)
+rowSums(dvals_reverse)
+rowSums(dvals)
+plot(ovals[1, ])
+plot(dvals[1, ])
+plot(dvals_reverse[200, ])
+
+
+
+private$pvt_drift_tvals <- t(sapply(seq_len(private$pvt_n_trials), function(i) {
+          private$shift_vec(self$tvals[i, ], dv[i])
+        }))
+
+
+set.seed(1010)
+
+# stable 100-trial contingency for model validation
+tt_nodrift <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=0)
+tt_nodrift$apply_flex(high_avg = 1, high_spread = 0, spread_max = 50, jump_high = FALSE)
+tt_nodrift$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
+
+vmat_erased <- tt_nodrift$get_values_matrix("drift")[81, ]
+vmat_orig <- tt_nodrift$get_original_tvals()[300,]
+
+plot(vmat_erased, type="l")
+lines(vmat_orig, type = "l", col = "blue")
+
+
+
+
+
+plot_troll_world(tt, frame_rate = 3, ncores=8)
+
+
+
+
+###########
+
+library(gganimate)
+vv <- tt$get_values_matrix()
+vdf <- reshape2::melt(vv, varnames = c("trial", "point"))
+ee <- tt$erasure_segments
+pos_df <- data.frame(pos_rad = tt$get_pvec(), point = seq_along(tt$get_pvec()))
+vdf <- vdf %>% left_join(ee, by=) %>% left_join(pos_df)
+
+gg <- ggplot(vdf %>% filter(trial == 1), aes(x = pos_rad, y = value)) +
+  geom_line() +
+  # transition_states(trial) +
+  ggtitle("Trial: {closest_state}", subtitle = "condition: {trial_type}") + # "Frame {frame} of {nframes}")
+  geom_rect(
+    data=vdf[1,],
+    mapping = aes(xmin = segment_min, xmax = segment_max, ymin = 0, ymax = value),
+    fill = "orange", color = "transparent", alpha = 0.2
+  )
+
+ggsave("tmp.pdf", gg)
+
+gg <- ggplot(vdf, aes(x = pos_rad, y = value)) +
+  geom_line() +
+  transition_states(trial) +
+  ggtitle("Trial: {closest_state}", subtitle = "condition: {trial_type}") + # "Frame {frame} of {nframes}")
+  geom_rect(
+    data=vdf[1,],
+    mapping = aes(xmin = segment_min, xmax = segment_max, ymin = 0, ymax = value),
+    fill = "orange", color = "transparent", alpha = 0.2
+  )
+
+aa <- animate(gg, renderer=gifski_renderer())
+frame_vars(aa)
+anim_save(gg, filename="test.mp4")
 sceptic_agent <- scepticc$new(n_basis=12, n_points=360, contingency=tt, beta = 40, epsilon_u = .1)
 df <- sceptic_agent$run_contingency()
 tt$get_choices()
@@ -93,12 +190,15 @@ if (animated_plot) {
   
   for (ii in 1:nrow(aa)) {
     if (tt$erasure_segments$trial_type[ii] == "erasure") {
-      ss <- paste(", er:", round(tt$erasure_segments[ii,"segment_min"], 2))
+      ss <- paste(", er:", round(tt$erasure_segments[ii, "segment_min"], 2))
+      vpos <- mean(unlist(tt$erasure_segments[ii, c("segment_min", "segment_max")]))
     } else {
       ss <- ""
+      vpos <- NULL
     }
     plot(aa[ii,], type="l", main=paste("Trial", ii, "epoch", tt$epoch[ii], ss), ylim = range(aa), xaxt='n')
     axis(side = 1, at = seq(1, 360, by=30), labels= loc[seq(1, 360, by=30)])
+    if (!is.null(vpos)) abline(v = vpos)
     Sys.sleep(.2)
     
   }
@@ -163,8 +263,11 @@ world$erasure_segments
 # dynamic contingency
 ttd <- troll_world$new(n_trials=300, values=contingency$get_wfunc(), drift_sd=5)
 ttd$apply_flex(high_avg = 1, high_spread = 0, low_avg = 10, spread_max = 150, jump_high = T)
+ttd$setup_erasure_blocks(disappear_clicks = 2, timeout_trials = 1)
 plot(ttd$get_starting_values())
 plot(ttd$spread)
+
+
 sceptic_agent <- scepticc$new(n_basis=12, n_points=200, contingency=ttd)
 
 
@@ -185,7 +288,7 @@ df <- cbind(learning_history, h, spread)
 # ggplot(obj_f, aes(x=choice, y=value)) + geom_line() +
 #   geom_point(data = learning_history, mapping=aes(x=choice, y=outcome, color=trial))
 cor.test(df$h, lag(df$spread, 10))
-ggplot(df, aes(x=trial, y=outcome, color=choice)) + geom_point() +
+ggplot(df, aes(x=trial, y=outcome, color=choice_rad)) + geom_point() +
   stat_smooth()
 
 ggplot(df) + geom_line( aes(x=trial, y=h*2)) + geom_point(aes(x = trial, y = choice, color = outcome)) + 
