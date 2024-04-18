@@ -1,4 +1,6 @@
-repo_dir <- "~/Data_Analysis/clock2"
+# repo_dir <- "~/Data_Analysis/clock2"
+repo_dir <- "~/code/clock2"
+
 setwd(repo_dir)
 source(file.path(repo_dir, "code", "von_mises_basis.R"))
 source(file.path(repo_dir, "code", "clock2_troll_world.R"))
@@ -7,6 +9,13 @@ source(file.path(repo_dir, "code", "scepticc.R"))
 library(tidyverse)
 library(ggplot2)
 library(rstan)
+
+results_dir <- "~/OneDrive/collected_letters/data_projects/clock_2/scepticc"; dir.create(file.path(results_dir), showWarnings = FALSE)
+
+# flags
+run_sampling <- T
+run_vba <- T
+
 
 # scepticc inversion in stan
 ncenters <- 9 # how many gaussians there are
@@ -38,28 +47,28 @@ generate_scepticc_data <- function(n=25, contingency = NULL) {
   
   seeds <- sample(1:1e4, size=n, replace=FALSE)
   
-  alpha_m <- 0.1
-  alpha_sd <- 0.1
+  alpha_m <- 0.3 # was 0.1
+  alpha_sd <- 0.2
   alphas <- rtruncnorm(n, a=0, b=1, mean=alpha_m, sd=alpha_sd)
   
-  beta_m <- 0.1
+  beta_m <- 1 # was .1, very cool
   beta_sd <- 2
   betas <- rtruncnorm(n, a=0.001, mean=beta_m, sd=beta_sd)
   
   gamma_m <- 0.3
-  gamma_sd <- 0.1
+  gamma_sd <- 0.2
   gammas <- rtruncnorm(n, a=0, b=1, mean=gamma_m, sd=gamma_sd)
   
   epsilon_u_m <- 1/12 # 8%
-  epsilon_u_sd <- 1/8
+  epsilon_u_sd <- 1/4
   epsilons <- rtruncnorm(n, a=0, b=1, mean=epsilon_u_m, sd=epsilon_u_sd)
   
   epsilon_u_m <- 1/12 # 8%
-  epsilon_u_sd <- 1/8
+  epsilon_u_sd <- 1/4
   epsilon_us <- rtruncnorm(n, a=0, b=1, mean=epsilon_u_m, sd=epsilon_u_sd)
-
+  
   epsilon_a_m <- 1/12 # 8%
-  epsilon_a_sd <- 1/8
+  epsilon_a_sd <- 1/4
   epsilon_as <- rtruncnorm(n, a=0, b=1, mean=epsilon_a_m, sd=epsilon_a_sd)
   
   dlist <- lapply(seq_len(n), function(i) {
@@ -79,7 +88,7 @@ generate_scepticc_data <- function(n=25, contingency = NULL) {
   
 }
 
-nsubj <- 25
+nsubj <- 100
 #ff_noerasure <- generate_scepticc_data(n = nsubj, contingency = ttd)
 ff <- generate_scepticc_data(n = nsubj, contingency = ttd)
 
@@ -131,7 +140,7 @@ segment_max <- ff %>%
 # round choices in radians onto positions vector/points -- superseded by internal bincode function in stan
 choices_to_pbins <- function(choices, bins=120) {
   d_theta <- 2 * pi / bins
-        
+  
   # since circle wraps, we want to avoid adding a redundant basis function at 0 vs. at 2*pi
   pvec <- seq(0, 2 * pi - d_theta, length.out = bins)
   choices[] <- Hmisc::cut2(choices, cuts = pvec)
@@ -158,10 +167,10 @@ data_list <- list(
 )
 
 
-niter  <- 600
+niter  <- 4000
 nwarmup <- 100
 nchain <- 4
-ncore <- 4
+ncore <- 20
 nthin <- 1
 adapt_delta <- 0.95
 stepsize <- 1
@@ -170,30 +179,144 @@ options(mc.cores = ncore)
 
 #stanmodel_arg <- file.path(repo_dir, "code", "scepticc_noepsilon.stan")
 stanmodel_arg <- file.path(repo_dir, "code", "scepticc.stan")
+rm(sm)
 sm <- rstan::stan_model(stanmodel_arg) # compile model
 
-# MCMC
-fit <- rstan::sampling(object  = sm,
-                        data    = data_list,
-                        #pars    = pars,
-                        #init    = gen_init,
-                        chains  = nchain,
-                        iter    = niter,
-                        warmup  = nwarmup,
-                        thin    = nthin,
-                        control = list(adapt_delta   = adapt_delta,
-                                      stepsize      = stepsize,
-                                      max_treedepth = max_treedepth))                             
+
+setwd(results_dir)
+
+if (run_vba) {
+  # VBA: same parameter recovery as MCMC
+  ee <- list()
+  for (ct in 1:4) {
+    tryCatch(fit_vba <- rstan::vb(object = sm,
+                                  data   = data_list) 
+                                  # init = my_init) # initializing with prior VBA estimates does not speed up estimation
+                                  # init = get_posterior_mean(fit_vba))
+             )
+    tryCatch(ee[[ct]] <- extract(fit_vba))#,
+    # algorithm = "meanfield",
+    # # eval_elbo = 10,
+    # tol_rel_obj = 0.005) # fullrank diverges
+    
+  }
+  saveRDS(ee, file = "~/OneDrive/collected_letters/data_projects/clock_2/vba_output_no_mV_division_by_beta_unfactorized.RDS")
+  # ee <- readRDS(file = "~/OneDrive/collected_letters/data_projects/clock_2/vba_output_no_mV_division_by_beta_unfactorized.RDS")
+  }
+
+# ee2 <- extract(fit_vba)
+# cor(pars$alphas, colMeans(ee2$alpha))
+# cor(pars$betas, colMeans(ee2$beta))
+# cor(pars$gammas, colMeans(ee2$gamma))
+# cor(pars$epsilon_us, colMeans(ee2$epsilon_u))
+# cor(pars$epsilon_as, colMeans(ee2$epsilon_int))
+
+ee1 <- list()
+ee1$alpha <- colMeans(rbind(ee[[1]]$alpha, ee[[2]]$alpha, ee[[3]]$alpha, ee[[4]]$alpha))
+ee1$beta <- colMeans(rbind(ee[[1]]$beta, ee[[2]]$beta, ee[[3]]$beta, ee[[4]]$beta))
+ee1$gamma <- colMeans(rbind(ee[[1]]$gamma, ee[[2]]$gamma, ee[[3]]$gamma, ee[[4]]$gamma))
+ee1$epsilon_u <- colMeans(rbind(ee[[1]]$epsilon_u, ee[[2]]$epsilon_u, ee[[3]]$epsilon_u, ee[[4]]$epsilon_u))
+ee1$epsilon_int <- colMeans(rbind(ee[[1]]$epsilon_int, ee[[2]]$epsilon_int, ee[[3]]$epsilon_int, ee[[4]]$epsilon_int))
+
+# using previous VBA estimates in case this run crashes
+my_init <- function () {list(alpha = ee2$alpha, beta = ee2$beta, gamma = ee2$gamma, epsilon_u = ee2$epsilon_u, epsilon_int = ee2$epsilon_int)}
 
 
-#saveRDS(fit, file="scepticc_n25_t300_26Mar2024.rds")
-cor(pars$alphas, colMeans(ee$alpha))
-plot(pars$alphas, colMeans(ee$alpha))
-cor(pars$betas, colMeans(ee$beta))
-cor(pars$gammas, colMeans(ee$gamma))
-plot(pars$gammas, colMeans(ee$gamma))
 
-ee <- extract(fit)
+if(run_sampling) {
+  # MCMC
+  fit <- rstan::sampling(object  = sm,
+                         data    = data_list,
+                         #pars    = pars,
+                         init    = my_init, # try initialization with vba
+                         chains  = nchain,
+                         iter    = niter,
+                         warmup  = nwarmup,
+                         thin    = nthin,
+                         control = list(adapt_delta   = adapt_delta,
+                                        stepsize      = stepsize,
+                                        max_treedepth = max_treedepth))
+  ee_s <- extract(fit)
+  saveRDS(ee_s, file = "~/OneDrive/collected_letters/data_projects/clock_2/sampling_output_no_mV_division_by_beta_unfactorized_vba_init.RDS")
+  # ee_s <- readRDS("~/OneDrive/collected_letters/data_projects/clock_2/sampling_output_no_mV_division_by_beta_unfactorized.RDS")
+  cor(pars$alphas, colMeans(ee_s$alpha))
+  cor(pars$betas, colMeans(ee_s$beta))
+  cor(pars$gammas, colMeans(ee_s$gamma))
+  cor(pars$epsilon_us, colMeans(ee_s$epsilon_u))
+  cor(pars$epsilon_as, colMeans(ee_s$epsilon_int))
+}
+
+
+# cor(pars$epsilon_us - pars$epsilon_as, colMeans(ee[[ct]]$epsilon_int))
+# plot(pars$epsilon_us - pars$epsilon_as, colMeans(ee[[ct]]$epsilon_int))
+
+# compile all recovered params for plotting
+
+d <- pars %>% select(alphas, betas, gammas, epsilon_us, epsilon_as) %>% rename(alpha = alphas, beta = betas, gamma = gammas, epsilon_u = epsilon_us,
+                                                                               epsilon_att = epsilon_as) %>%
+  cbind(as_tibble(cbind(colMeans(ee_s$alpha), colMeans(ee_s$beta), colMeans(ee_s$gamma), colMeans(ee_s$epsilon_u), colMeans(ee_s$epsilon_int))) 
+        %>% set_names(c("alpha_s", "beta_s", "gamma_s", "epsilon_u_s", "epsilon_int_s"))) %>%
+  cbind(as_tibble(cbind(colMeans(ee1$alpha), colMeans(ee1$beta), colMeans(ee1$gamma), colMeans(ee1$epsilon_u), colMeans(ee1$epsilon_int))) 
+        %>% set_names(c("alpha_vb", "beta_vb", "gamma_vb", "epsilon_u_vb", "epsilon_int_vb")))
+library(ggExtra)
+library(cowplot)
+library(ggpubr)
+p <- ggplot(d, aes(alpha, alpha_s)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "red") + geom_abline()  + theme_half_open() 
+p1 <- ggMarginal(p, type = "density")
+p <- ggplot(d, aes(beta, beta_s)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "red") + geom_abline()  + theme_half_open()
+p2 <- ggMarginal(p, type = "density")
+p <- ggplot(d, aes(gamma, gamma_s)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "red") + geom_abline()  + theme_half_open()
+p3 <- ggMarginal(p, type = "density")
+p <- ggplot(d, aes(epsilon_u - 1/12, epsilon_u_s)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "red") + geom_abline()  + theme_half_open()
+p4 <- ggMarginal(p, type = "density")
+p <- ggplot(d, aes(epsilon_att - 1/12, epsilon_int_s)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "red") + geom_abline()  + theme_half_open()
+p4a <- ggMarginal(p, type = "density")
+
+
+
+p <- ggplot(d, aes(alpha, alpha_vb)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "blue") + geom_abline()  + theme_half_open() 
+p5 <- ggMarginal(p, type = "density")
+p <- ggplot(d, aes(beta, beta_vb)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "blue") + geom_abline()  + theme_half_open()
+p6 <- ggMarginal(p, type = "density")
+p <- ggplot(d, aes(gamma, gamma_vb)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "blue") + geom_abline()  + theme_half_open()
+p7 <- ggMarginal(p, type = "density")
+p <- ggplot(d, aes(epsilon_u - 1/12, epsilon_u_vb)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "blue") + geom_abline()  + theme_half_open()
+p8 <- ggMarginal(p, type = "density")
+p <- ggplot(d, aes(epsilon_att - 1/12, epsilon_int_vb)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "blue") + geom_abline()  + theme_half_open()
+p8a <- ggMarginal(p, type = "density")
+
+p <- ggplot(d, aes(alpha_s, alpha_vb)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "purple") + geom_abline()  + theme_half_open() 
+p9 <- ggMarginal(p, type = "density")
+p <- ggplot(d, aes(beta_s, beta_vb)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "purple") + geom_abline()  + theme_half_open()
+p10 <- ggMarginal(p, type = "density")
+p <- ggplot(d, aes(gamma_s, gamma_vb)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "purple") + geom_abline()  + theme_half_open()
+p11 <- ggMarginal(p, type = "density")
+p <- ggplot(d, aes(epsilon_u_s, epsilon_u_vb)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "purple") + geom_abline()  + theme_half_open()
+p12 <- ggMarginal(p, type = "density")
+p <- ggplot(d, aes(epsilon_int_s, epsilon_int_vb)) + geom_point(alpha = .5) + stat_cor(aes(label = ..r.label..),  r.digits = 2, color = "purple") + geom_abline()  + theme_half_open()
+p12a <- ggMarginal(p, type = "density")
+
+
+setwd(results_dir)
+pdf("wide_pars_resovery_vb_mcmc_noVm_division_by_beta_unfactorized.pdf", 12, 7)
+cowplot::plot_grid(as_grob(p1), as_grob(p2), as_grob(p3), as_grob(p4), as_grob(p4a),
+                   as_grob(p5), as_grob(p6), as_grob(p7), as_grob(p8), as_grob(p8a),
+                   as_grob(p9), as_grob(p10), as_grob(p11), as_grob(p12), as_grob(p12a), nrow = 3) + theme_half_open()
+dev.off()
+
+cormat_s = cor(d %>% select(contains("_s")))
+
+
+cormat_vb = cor(d %>% select(contains("_vb")))
+
+pdf("wide_pars_cormat_vb_noVm_division_by_beta_unfactorized.pdf", 4, 4)
+corrplot::corrplot(cormat_vb, method = 'number', type = "lower", diag = F)
+dev.off()
+
+pdf("wide_pars_cormat_mcmc_noVm_division_by_beta_unfactorized.pdf", 4, 4)
+corrplot::corrplot(cormat_s, method = 'number', type = "lower", diag = F)
+dev.off()
+
 
 
 parVals <- rstan::extract(fit, permuted = TRUE)
@@ -238,7 +361,7 @@ n_basis <- 12
 d_theta <- (2 * pi) / n_basis
 basis_sd <- rep(0.3, 12)
 weights_0 <- rep(0, 12)
-      
+
 # since circle wraps, we want to avoid adding a redundant basis function at 0 vs. at 2*pi
 loc <- seq(0, 2*pi - d_theta, by=d_theta)
 vset <- lapply(seq_along(loc), function(ii) {

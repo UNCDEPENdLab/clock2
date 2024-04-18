@@ -299,14 +299,16 @@ model {
       // compute evaluated value function
       V = to_vector(to_row_vector(w) * Phi); // w is B and Phi is B x P -> 1 x P
       mV = mean(V);
-      st = S[i,t] .* mV;
+      // st = S[i,t] .* mV; // original parameterization, scaling by mean value
+      st = S[i,t]; // no scaling by mean value
       V = V - max(V); // subtract max to make categorical_logit easier
       
       // V = rep_vector(0.0, P); // debug with a forced value vector of 0
       // print("V: ", V);
 
       // predicted softmax choice -- multinomial
-      choices[i,t] ~ categorical_logit(V / beta[i] + epsilon_t .* st);
+      // choices[i,t] ~ categorical_logit(V / beta[i] + epsilon_t .* st); // original parameterization
+      choices[i,t] ~ categorical_logit((V + epsilon_t .* st) / beta[i]);
 
       // look up eligibility for each basis using the position of the choice
       e = to_vector(EB[choices[i,t],]);
@@ -316,7 +318,7 @@ model {
 
       // decay by basis
       decay = gamma[i] * (1 - e) .* w;
-
+      // decay = alpha[i] * gamma[i] * (1 - e) .* w;
       // update weights based on PE and decay
       w = w + alpha[i] * e .* pe - decay;
     }
