@@ -13,7 +13,7 @@ library(rstan)
 results_dir <- "~/OneDrive/collected_letters/data_projects/clock_2/scepticc"; dir.create(file.path(results_dir), showWarnings = FALSE)
 
 # flags
-run_sampling <- T
+run_sampling <- F
 run_vba <- T
 
 
@@ -167,8 +167,8 @@ data_list <- list(
 )
 
 
-niter  <- 4000
-nwarmup <- 100
+niter  <- 2000
+nwarmup <- 500
 nchain <- 4
 ncore <- 20
 nthin <- 1
@@ -188,9 +188,10 @@ setwd(results_dir)
 if (run_vba) {
   # VBA: same parameter recovery as MCMC
   ee <- list()
-  for (ct in 1:4) {
+  for (ct in 1) {
     tryCatch(fit_vba <- rstan::vb(object = sm,
-                                  data   = data_list) 
+                                  data   = data_list,
+                                  tol_rel_obj = 0.001) # fullrank diverges 
                                   # init = my_init) # initializing with prior VBA estimates does not speed up estimation
                                   # init = get_posterior_mean(fit_vba))
              )
@@ -200,16 +201,18 @@ if (run_vba) {
     # tol_rel_obj = 0.005) # fullrank diverges
     
   }
-  saveRDS(ee, file = "~/OneDrive/collected_letters/data_projects/clock_2/vba_output_no_mV_division_by_beta_unfactorized.RDS")
-  # ee <- readRDS(file = "~/OneDrive/collected_letters/data_projects/clock_2/vba_output_no_mV_division_by_beta_unfactorized.RDS")
+  saveRDS(ee, file = "~/OneDrive/collected_letters/data_projects/clock_2/vba_output_no_mV_division_by_beta_unfactorized_beta1.RDS")
+  
   }
 
-# ee2 <- extract(fit_vba)
-# cor(pars$alphas, colMeans(ee2$alpha))
-# cor(pars$betas, colMeans(ee2$beta))
-# cor(pars$gammas, colMeans(ee2$gamma))
-# cor(pars$epsilon_us, colMeans(ee2$epsilon_u))
-# cor(pars$epsilon_as, colMeans(ee2$epsilon_int))
+
+# ee <- readRDS(file = "~/OneDrive/collected_letters/data_projects/clock_2/vba_output_no_mV_division_by_beta_unfactorized.RDS")
+ee_vb <- extract(fit_vba)
+cor(pars$alphas, colMeans(ee_vb$alpha))
+cor(pars$betas, colMeans(ee_vb$beta))
+cor(pars$gammas, colMeans(ee_vb$gamma))
+cor(pars$epsilon_us, colMeans(ee_vb$epsilon_u))
+cor(pars$epsilon_as, colMeans(ee_vb$epsilon_int))
 
 ee1 <- list()
 ee1$alpha <- colMeans(rbind(ee[[1]]$alpha, ee[[2]]$alpha, ee[[3]]$alpha, ee[[4]]$alpha))
@@ -219,7 +222,7 @@ ee1$epsilon_u <- colMeans(rbind(ee[[1]]$epsilon_u, ee[[2]]$epsilon_u, ee[[3]]$ep
 ee1$epsilon_int <- colMeans(rbind(ee[[1]]$epsilon_int, ee[[2]]$epsilon_int, ee[[3]]$epsilon_int, ee[[4]]$epsilon_int))
 
 # using previous VBA estimates in case this run crashes
-my_init <- function () {list(alpha = ee2$alpha, beta = ee2$beta, gamma = ee2$gamma, epsilon_u = ee2$epsilon_u, epsilon_int = ee2$epsilon_int)}
+my_init <- function () {list(alpha = ee1$alpha, beta = ee1$beta, gamma = ee1$gamma, epsilon_u = ee1$epsilon_u, epsilon_int = ee1$epsilon_int)}
 
 
 
@@ -237,7 +240,7 @@ if(run_sampling) {
                                         stepsize      = stepsize,
                                         max_treedepth = max_treedepth))
   ee_s <- extract(fit)
-  saveRDS(ee_s, file = "~/OneDrive/collected_letters/data_projects/clock_2/sampling_output_no_mV_division_by_beta_unfactorized_vba_init.RDS")
+  saveRDS(ee_s, file = "~/OneDrive/collected_letters/data_projects/clock_2/sampling_output_wide_params_no_mV_division_by_beta_unfactorized_vba_init.RDS")
   # ee_s <- readRDS("~/OneDrive/collected_letters/data_projects/clock_2/sampling_output_no_mV_division_by_beta_unfactorized.RDS")
   cor(pars$alphas, colMeans(ee_s$alpha))
   cor(pars$betas, colMeans(ee_s$beta))
@@ -254,9 +257,9 @@ if(run_sampling) {
 
 d <- pars %>% select(alphas, betas, gammas, epsilon_us, epsilon_as) %>% rename(alpha = alphas, beta = betas, gamma = gammas, epsilon_u = epsilon_us,
                                                                                epsilon_att = epsilon_as) %>%
-  cbind(as_tibble(cbind(colMeans(ee_s$alpha), colMeans(ee_s$beta), colMeans(ee_s$gamma), colMeans(ee_s$epsilon_u), colMeans(ee_s$epsilon_int))) 
+  cbind(as_tibble(cbind(colMeans(ee_s$alpha), colMeans(ee_s$beta), colMeans(ee_s$gamma), colMeans(ee_s$epsilon_u), colMeans(ee_s$epsilon_int)))
         %>% set_names(c("alpha_s", "beta_s", "gamma_s", "epsilon_u_s", "epsilon_int_s"))) %>%
-  cbind(as_tibble(cbind(colMeans(ee1$alpha), colMeans(ee1$beta), colMeans(ee1$gamma), colMeans(ee1$epsilon_u), colMeans(ee1$epsilon_int))) 
+  cbind(as_tibble(cbind((ee1$alpha), (ee1$beta), (ee1$gamma), (ee1$epsilon_u), (ee1$epsilon_int))) 
         %>% set_names(c("alpha_vb", "beta_vb", "gamma_vb", "epsilon_u_vb", "epsilon_int_vb")))
 library(ggExtra)
 library(cowplot)
@@ -298,7 +301,7 @@ p12a <- ggMarginal(p, type = "density")
 
 
 setwd(results_dir)
-pdf("wide_pars_resovery_vb_mcmc_noVm_division_by_beta_unfactorized.pdf", 12, 7)
+pdf("wide_pars_resovery_vb_mcmc4000_noVm_division_by_beta_unfactorized.pdf", 12, 7)
 cowplot::plot_grid(as_grob(p1), as_grob(p2), as_grob(p3), as_grob(p4), as_grob(p4a),
                    as_grob(p5), as_grob(p6), as_grob(p7), as_grob(p8), as_grob(p8a),
                    as_grob(p9), as_grob(p10), as_grob(p11), as_grob(p12), as_grob(p12a), nrow = 3) + theme_half_open()
@@ -313,7 +316,7 @@ pdf("wide_pars_cormat_vb_noVm_division_by_beta_unfactorized.pdf", 4, 4)
 corrplot::corrplot(cormat_vb, method = 'number', type = "lower", diag = F)
 dev.off()
 
-pdf("wide_pars_cormat_mcmc_noVm_division_by_beta_unfactorized.pdf", 4, 4)
+pdf("wide_pars_cormat_mcmc4000_noVm_division_by_beta_unfactorized.pdf", 4, 4)
 corrplot::corrplot(cormat_s, method = 'number', type = "lower", diag = F)
 dev.off()
 
