@@ -59,7 +59,7 @@ segment_max <- df0 %>%
   select(!subject) %>%
   data.matrix()
 
-# zero_to_2pi wraps 360 to 0, making 360 the 'max' and 30 the 'min', correct this
+# zero_to_2pi wraps 360 to 0, making 360 the 'min' and 30 the 'max', correct this
 segment_max[round(segment_max - segment_min,7)==-0.5235988] = 30*pi/180
 segment_min[round(segment_max - segment_min,7)==-0.5235988] = 0
 
