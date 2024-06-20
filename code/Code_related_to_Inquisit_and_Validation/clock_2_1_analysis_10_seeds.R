@@ -11,63 +11,63 @@ library(BAMBI)
 library(pracma)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-152.csv'
 d1 <- read_csv(design_file)
-dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d1$value[d1$trial==iT],90)))}
-d1$value = dx;
+#dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d1$value[d1$trial==iT],90)))}
+#d1$value = dx;
 d1 <- d1 %>% group_by(trial) %>% summarise(vmax = max(value),
                                                    vmax_location = RT[which.max(value)]) %>% mutate(seed = 152)
 
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-868.csv'
 d2 <- read_csv(design_file)
-dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d2$value[d2$trial==iT],90)))}
-d2$value = dx;
+#dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d2$value[d2$trial==iT],90)))}
+#d2$value = dx;
 d2 <- d2 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 868)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-1464.csv'
 d3 <- read_csv(design_file)
-dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d3$value[d3$trial==iT],90)))}
-d3$value = dx;
+#dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d3$value[d3$trial==iT],90)))}
+#d3$value = dx;
 d3 <- d3 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 1464)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-1752.csv'
 d4 <- read_csv(design_file)
-dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d4$value[d4$trial==iT],90)))}
-d4$value = dx;
+#dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d4$value[d4$trial==iT],90)))}
+#d4$value = dx;
 d4 <- d4 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 1752)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-2534.csv'
 d5 <- read_csv(design_file)
-dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d5$value[d5$trial==iT],90)))}
-d5$value = dx;
+#dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d5$value[d5$trial==iT],90)))}
+#d5$value = dx;
 d5 <- d5 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 2534)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-4938.csv'
 d6 <- read_csv(design_file)
-dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d6$value[d6$trial==iT],90)))}
-d6$value = dx;
+#dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d6$value[d6$trial==iT],90)))}
+#d6$value = dx;
 d6 <- d6 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 4938)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-5094.csv'
 d7 <- read_csv(design_file)
-dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d7$value[d7$trial==iT],90)))}
-d7$value = dx;
+#dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d7$value[d7$trial==iT],90)))}
+#d7$value = dx;
 d7 <- d7 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 5094)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-5173.csv'
 d8 <- read_csv(design_file)
-dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d8$value[d8$trial==iT],90)))}
-d8$value = dx;
+#dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d8$value[d8$trial==iT],90)))}
+#d8$value = dx;
 d8 <- d8 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 5173)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-5815.csv'
 d9 <- read_csv(design_file)
-dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d9$value[d9$trial==iT],90)))}
-d9$value = dx;
+#dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d9$value[d9$trial==iT],90)))}
+#d9$value = dx;
 d9 <- d9 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 5815)
 design_file <- '/Users/andypapale/clock2/Inquisit_design_files/Design-Matrix-6520.csv'
 d10 <- read_csv(design_file)
-dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d10$value[d10$trial==iT],90)))}
-d10$value = dx;
+#dx <- NULL; for (iT in 1:300){ dx <- rbind(dx, as.matrix(circshift(d10$value[d10$trial==iT],90)))}
+#d10$value = dx;
 d10 <- d10 %>% group_by(trial) %>% summarise(vmax = max(value),
                                            vmax_location = RT[which.max(value)]) %>% mutate(seed = 6520)
 design <- rbind(d1,d2,d3,d4,d5,d6,d7,d8,d9,d10)
@@ -169,6 +169,10 @@ design <- inner_join(design, epoch,by = c('trial','seed'))
 
 df0 <- read_csv('/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - DNPLskinner/skinner/data/prolific/clock_v2.1_pilot/prolific_01-09/raw/2024-01-09-Raw-noValueVector.csv')
 
+# these subjects have a data formatting problem
+df0 <- df0 %>% filter(subject != '6449707327ff66156c264c6f' & subject!='6464b45cf8e8a0f06fe011b9')
+
+
 df0 <- df0 %>% filter(trialcode == 'feedback')
 df0 <- df0 %>% mutate(u_present = case_when(trial_type == 'erasure' ~ TRUE,
                                             trial_type != 'erasure' ~ FALSE),
@@ -182,15 +186,17 @@ df0 <- df0 %>% mutate(u_present = case_when(trial_type == 'erasure' ~ TRUE,
 
 df0 <- inner_join(df0,design,by=c('trial','seed'))
 
-
-df0 <- df0 %>% mutate(resp_theta = pos_shifted * pi/180,
+#df0 <- df0 %>% mutate(rt_index1 = case_when(rt_index+90 <= 360 ~ rt_index+90, rt_index+90 > 360 ~ abs(360-(rt_index+90))))
+df0 <- df0 %>% mutate(resp_theta = pos_shifted*pi/180,
                       resp_theta_c = zero_to_2pi(resp_theta),
                       vmax_theta = vmax_location * pi/180,
                       vmax_theta_c = zero_to_2pi(vmax_theta),
                       u_theta = u_location * pi/180,
                       u_theta_c = zero_to_2pi(u_theta),
                       att_theta = att_location * pi/180,
-                      att_theta_c = zero_to_2pi(att_theta)) %>% group_by(subject) %>% arrange(trial) %>%
+                      att_theta_c = zero_to_2pi(att_theta)) %>% 
+  group_by(subject) %>% 
+  arrange(trial) %>%
   mutate(resp_theta_c_lag = lag(resp_theta_c),
          vmax_theta_c_lag = lag(vmax_theta_c),
          vmax_loc_scaled = scale(vmax_location),
@@ -205,12 +211,14 @@ df0 <- df0 %>% add_count(epoch_bin, epoch,seed) %>% group_by(epoch_bin,seed) %>%
 
 df0 <- df0 %>% arrange(subject,block,trial)
 
-# these subjects have a data formatting problem
-df0 <- df0 %>% filter(subject != '6449707327ff66156c264c6f' & subject!='6464b45cf8e8a0f06fe011b9')
-df0 <- df0 %>% mutate(rt_index1 = case_when(rt_index+90 <= 360 ~ rt_index+90, rt_index+90 > 360 ~ abs(360-(rt_index+90))))
+df0 <- df0 %>% mutate(rt_index_theta_c = zero_to_2pi(rt_index*pi/180))  %>% 
+  group_by(subject) %>% 
+  arrange(trial) %>%
+  mutate(rt_index_theta_lag = lag(rt_index_theta_c)) %>%
 
 pdf('resp-RTvmax.pdf',height=12,width=12)
-gg1 <- ggplot(df0, aes(x=trial,y=minuspi_to_pi(resp_theta_c - vmax_theta_c),color=inc_rg)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus vmax_location')
+df1 <- df0 %>% filter(mag > 100)
+gg1 <- ggplot(df1, aes(x=trial,y=minuspi_to_pi(rt_index_theta_c - vmax_theta_c),color=mag)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus vmax_location')
 print(gg1)
 dev.off()
 ggplot(df0, aes(x=trial,y=minuspi_to_pi(resp_theta_c - u_theta_c),color=subject,size=inc_rg)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus u_location')
@@ -275,7 +283,7 @@ ggplot(design, aes(trial, vmax)) + geom_line() + scale_color_viridis_c()
 ggplot(df0,aes(x=trial,y=minuspi_to_pi(resp_theta_c - vmax_theta_c))) + geom_point() + facet_grid(epoch~trial_type) + geom_hline(yintercept = 0) + ggtitle('RT minus vmax_location')
 ggplot(df0,aes(x=trial,y=minuspi_to_pi(resp_theta_c - u_theta_c))) + geom_point() + facet_grid(epoch~trial_type) + geom_hline(yintercept = 0) + ggtitle('RT - u_location')
 
-m1 <- lmerTest::lmer(pos_shifted ~ scale(vmax_location)*scale(vmax) + scale(resp_theta_c_lag)*outcome_lag + (1|subject), df0)
+m1 <- lmerTest::lmer(rt_index_theta_c ~ scale(vmax_location)*scale(vmax) + scale(rt_index_theta_lag)*outcome_lag + (1|subject), df0)
 summary(m1)
 
 df <- df0
@@ -283,10 +291,10 @@ mlist <- list()
 for (i in 1:1000) {
   df$u_location[!df$u_present] <- runif(length(df$u_location[!df$u_present]), 0, 360)
   df$att_location[!df$att_present] <- runif(length(df$att_location[!df$att_present]), 0, 360)
-  mi <- lmerTest::lmer(pos_shifted ~ scale(vmax_location)*scale(vmax) + 
+  mi <- lmerTest::lmer(rt_index_theta_c ~ scale(vmax_location)*scale(vmax) + 
                          scale(u_location)*u_present + 
                          scale(att_location)*att_present +
-                         resp_theta_c_lag*outcome_lag +
+                         rt_index_theta_lag*outcome_lag +
                          (1|subject), 
                        df)
   mdf <- broom.mixed::tidy(mi)
