@@ -187,13 +187,16 @@ df0 <- df0 %>% mutate(u_present = case_when(trial_type == 'erasure' ~ TRUE,
 df0 <- inner_join(df0,design,by=c('trial','seed'))
 
 #df0 <- df0 %>% mutate(rt_index1 = case_when(rt_index+90 <= 360 ~ rt_index+90, rt_index+90 > 360 ~ abs(360-(rt_index+90))))
-df0 <- df0 %>% mutate(resp_theta = pos_shifted*pi/180,
+df0 <- df0 %>% mutate(resp_theta = case_when(pos_shifted < 90 ~ (pos_shifted + 270) * pi/180,
+                                             pos_shifted >= 90 ~ (pos_shifted - 90) * pi/180),
                       resp_theta_c = zero_to_2pi(resp_theta),
                       vmax_theta = vmax_location * pi/180,
                       vmax_theta_c = zero_to_2pi(vmax_theta),
-                      u_theta = u_location * pi/180,
+                      u_theta = case_when(u_location < 90 ~ (u_location + 270) * pi/180,
+                                          u_location >= 90 ~ (u_location - 90) * pi/180),
                       u_theta_c = zero_to_2pi(u_theta),
-                      att_theta = att_location * pi/180,
+                      att_theta = case_when(att_location < 90 ~ (att_location + 270) * pi/180,
+                                            att_location >= 90 ~ (att_location - 90) * pi/180),
                       att_theta_c = zero_to_2pi(att_theta)) %>% 
   group_by(subject) %>% 
   arrange(trial) %>%
@@ -221,7 +224,7 @@ df1 <- df0 %>% filter(mag > 100)
 gg1 <- ggplot(df1, aes(x=trial,y=minuspi_to_pi(rt_index_theta_c - vmax_theta_c),color=mag)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus vmax_location')
 print(gg1)
 dev.off()
-ggplot(df0, aes(x=trial,y=minuspi_to_pi(resp_theta_c - u_theta_c),color=subject,size=inc_rg)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus u_location')
+ggplot(df0, aes(x=trial,y=minuspi_to_pi(resp_theta_c - u_theta_c))) + geom_point() + ggtitle('RT minus u_location')
 ggplot(df0, aes(x=trial,y=minuspi_to_pi(resp_theta_c - att_theta_c),color=subject)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus att_location')
 
 
@@ -283,18 +286,18 @@ ggplot(design, aes(trial, vmax)) + geom_line() + scale_color_viridis_c()
 ggplot(df0,aes(x=trial,y=minuspi_to_pi(resp_theta_c - vmax_theta_c))) + geom_point() + facet_grid(epoch~trial_type) + geom_hline(yintercept = 0) + ggtitle('RT minus vmax_location')
 ggplot(df0,aes(x=trial,y=minuspi_to_pi(resp_theta_c - u_theta_c))) + geom_point() + facet_grid(epoch~trial_type) + geom_hline(yintercept = 0) + ggtitle('RT - u_location')
 
-m1 <- lmerTest::lmer(rt_index_theta_c ~ scale(vmax_location)*scale(vmax) + scale(rt_index_theta_lag)*outcome_lag + (1|seed/subject), df0)
+m1 <- lmerTest::lmer(resp_theta_c ~ scale(vmax_location)*scale(vmax) + scale(resp_theta_c_lag)*outcome_lag + (1|subject), df0)
 summary(m1)
 
 df <- df0
 mlist <- list()
 for (i in 1:1000) {
-  df$u_location[!df$u_present] <- runif(length(df$u_location[!df$u_present]), 0, 360)
-  df$att_location[!df$att_present] <- runif(length(df$att_location[!df$att_present]), 0, 360)
-  mi <- lmerTest::lmer(rt_index_theta_c ~ scale(vmax_location)*scale(vmax) + 
-                         scale(u_location)*u_present + 
-                         scale(att_location)*att_present +
-                         rt_index_theta_lag*outcome_lag +
+  df$u_theta_c[!df$u_present] <- runif(length(df$u_theta_c[!df$u_present]), 0, 360)
+  df$att_theta_c[!df$att_present] <- runif(length(df$att_theta_c[!df$att_present]), 0, 360)
+  mi <- lmerTest::lmer(resp_theta_c ~ scale(vmax_location)*scale(vmax) + 
+                         scale(u_theta_c)*u_present + 
+                         scale(att_theta_c)*att_present +
+                         resp_theta_c_lag*outcome_lag +
                          (1|subject), 
                        df)
   mdf <- broom.mixed::tidy(mi)
