@@ -225,7 +225,7 @@ gg1 <- ggplot(df1, aes(x=trial,y=minuspi_to_pi(rt_index_theta_c - vmax_theta_c),
 print(gg1)
 dev.off()
 ggplot(df0, aes(x=trial,y=minuspi_to_pi(resp_theta_c - u_theta_c))) + geom_point() + ggtitle('RT minus u_location')
-ggplot(df0, aes(x=trial,y=minuspi_to_pi(resp_theta_c - att_theta_c),color=subject)) + geom_point() + facet_wrap(~subject) + ggtitle('RT minus att_location')
+ggplot(df0, aes(x=trial,y=minuspi_to_pi(resp_theta_c - att_theta_c))) + geom_point() + ggtitle('RT minus att_location')
 
 
 
@@ -315,19 +315,19 @@ mean_ddf <- ddf %>% filter(effect == "fixed") %>% select(-i, -effect, -group) %>
 df0$ITI <- scale(df0$list.ITI.currentvalue)
 df0 <- df0 %>% group_by(subject,block) %>% mutate(ISI_lag = lag(list.ISI.currentvalue)) %>% ungroup()
 df0$ISI_lag <- scale(df0$ISI_lag)
-
-m2 <- lmerTest::lmer(rt_index_theta_c ~ scale(vmax_location)*scale(vmax)*ISI_lag*ITI + scale(rt_index_theta_lag)*outcome_lag*ISI_lag*ITI + (1|subject), df0)
+df0$ISI <- df0$list.ISI.currentvalue;
+m2 <- lmerTest::lmer(resp_theta_c ~ scale(vmax_location)*scale(vmax)*ISI_lag*ITI + scale(resp_theta_c_lag)*outcome_lag*ISI_lag*ITI + (1|subject), df0)
 summary(m2)
 
 df <- df0
 mlist <- list()
 for (i in 1:1000) {
-  df$u_location[!df$u_present] <- runif(length(df$u_location[!df$u_present]), 0, 360)
-  df$att_location[!df$att_present] <- runif(length(df$att_location[!df$att_present]), 0, 360)
-  mi <- lmerTest::lmer(rt_index_theta_c ~ scale(vmax_location)*scale(vmax)*ISI_lag*ITI + 
-                         scale(u_location)*u_present*ISI_lag*ITI + 
-                         scale(att_location)*att_present*ISI_lag*ITI +
-                         rt_index_theta_lag*outcome_lag*ISI_lag*ITI +
+  df$u_theta_c[!df$u_present] <- runif(length(df$u_theta_c[!df$u_present]), 0, 360)
+  df$att_theta_c[!df$att_present] <- runif(length(df$att_theta_c[!df$att_present]), 0, 360)
+  mi <- lmerTest::lmer(resp_theta_c ~ scale(vmax_location)*scale(vmax)*ISI_lag*ITI + 
+                         scale(u_theta_c)*u_present*ISI_lag*ITI + 
+                         scale(att_theta_c)*att_present*ISI_lag*ITI +
+                         resp_theta_c_lag*outcome_lag*ISI_lag*ITI +
                          (1|subject), 
                        df)
   mdf <- broom.mixed::tidy(mi)
