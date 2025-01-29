@@ -1,5 +1,5 @@
 # repo_dir <- "~/Data_Analysis/clock2"
-repo_dir <- "~/code/clock2"
+repo_dir <- "~/clock2"
 
 setwd(repo_dir)
 source(file.path(repo_dir, "code", "von_mises_basis.R"))
@@ -165,7 +165,7 @@ data_list <- list(
   segment_min = segment_min,
   segment_max = segment_max
 )
-
+browser()
 
 niter  <- 2000
 nwarmup <- 500

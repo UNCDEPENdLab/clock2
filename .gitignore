@@ -43,4 +43,4 @@ vignettes/*.pdf
 .DS_Store
 *.RData
 *.RData
-*.csv
+

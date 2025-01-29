@@ -341,5 +341,26 @@ mean_ddf <- ddf %>% filter(effect == "fixed") %>% select(-i, -effect, -group) %>
 
 df0 <- df0 %>% mutate(seed = as.factor(seed))
 
-m4 <- lmerTest::lmer(rt_index_theta_c ~ scale(vmax_location)*scale(vmax)*seed + scale(rt_index_theta_lag)*outcome_lag*seed + (1|subject), df0)
+m4 <- lmerTest::lmer(resp_theta_c ~ scale(vmax_location)*scale(vmax)*seed + scale(resp_theta_c_lag)*outcome_lag*seed + (1|subject), df0)
 summary(m4)
+
+df <- df0
+mlist <- list()
+for (i in 1:1000) {
+  df$u_theta_c[!df$u_present] <- runif(length(df$u_theta_c[!df$u_present]), 0, 360)
+  df$att_theta_c[!df$att_present] <- runif(length(df$att_theta_c[!df$att_present]), 0, 360)
+  mi <- lmerTest::lmer(resp_theta_c ~ scale(vmax_location)*scale(vmax)*seed + 
+                         scale(u_theta_c)*u_present*seed + 
+                         scale(att_theta_c)*att_present*seed +
+                         resp_theta_c_lag*outcome_lag*seed +
+                         (1|subject), 
+                       df)
+  mdf <- broom.mixed::tidy(mi)
+  mdf$i <- i
+  mlist[[i]] <- mdf
+  print(i)
+}
+ddf <- rbindlist(mlist)
+str(ddf)
+mean_ddf <- ddf %>% filter(effect == "fixed") %>% select(-i, -effect, -group) %>% group_by(term) %>% summarise_all(mean)
+
